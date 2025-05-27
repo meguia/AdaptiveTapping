@@ -29,11 +29,11 @@ end
 # ╔═╡ 78b728f8-6991-4fe3-b2aa-cedb6e6629cf
 function adaptive(u,par,t)
 	p, y, T, s = u
-	a, b, c, d, α, β, γ, δ, A, B = par
+	a, b, c, d, α, β, γ, δ, A, B, τ = par
 	e = p - (T - s)
 	pn = a*e + b*(y-T) + α*e^3 + β*e*(y-T)^2 + γ*(y - T)^3
 	yn = c*e + d*(y-T) + T + δ*e^2
-	Tn = A*e + B*(T - s) + T
+	Tn = A*e + B*(T - τ) + T
 	sn = T
 	return  SVector(pn, yn, Tn, sn)
 end	
@@ -47,7 +47,7 @@ Tpost : $(@bind Tpost Slider(420:10:580, default=500, show_value=true)) \
 
 # ╔═╡ 3e84b871-39da-4505-98cc-09741affa5be
 # parameters for Type I
-p = [ 0.981, 0.266, -0.823, 0.0238, -2.21e-5, -7.84e-5, 5.34e-5, 3.35e-3, A, B]
+p = [ 0.981, 0.266, -0.823, 0.0238, -2.21e-5, -7.84e-5, 5.34e-5, 3.35e-3, A, B, 500]
 
 # ╔═╡ 48b0c7eb-fbd4-4310-b11c-48ab56e89334
 u0 = [0, 500, Tpost, 500.0]
