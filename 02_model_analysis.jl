@@ -32,6 +32,9 @@ begin
 	l1 = [substitute(sol[1], Dict([A => A0, B=> B0])) for A0 in A0v];
 	l2 = [substitute(sol[2], Dict([A => A0, B=> B0])) for A0 in A0v];
 	l3 = [substitute(sol[3], Dict([A => A0, B=> B0])) for A0 in A0v];
+	d1 = findall(diff(abs.(l1) .> 1) .!= 0.0)
+	d2 = findall(diff(abs.(l2) .> 1) .!= 0.0)
+	d3 = findall(diff(abs.(l3) .> 1) .!= 0.0)
 end	
 
 # ╔═╡ fc20e05c-d670-47b4-8573-b3ce69c4e09a
@@ -39,14 +42,25 @@ begin
 	p1 = scatter(A0v, c=:blue, ms=2, msw = 0, real(l1), label="")
 	scatter!(A0v, c=:blue, ms=2, msw = 0, real(l2), label="")
 	scatter!(A0v, c=:blue, ms=2, msw = 0, real(l3), label="")
-	plot!([A0v[1],A0v[end]],[1,1],c=:black,ls=:dash)
+	scatter!(A0v[d1],real(l1[d1]), ms=3, c=:green, label="")
+	scatter!(A0v[d2],real(l2[d2]), ms=3, c=:green, label="")
+	scatter!(A0v[d3],real(l3[d3]), ms=3, c=:green, label="")
+	for d in d1 plot!([A0v[d],A0v[d]],[-1.2,1.5],c=:black,label=""); end
+	for d in d2 plot!([A0v[d],A0v[d]],[-1.2,1.5],c=:black,label=""); end
+	for d in d3 plot!([A0v[d],A0v[d]],[-1.2,1.5],c=:black,label=""); end
 	p2 = scatter(A0v, c=:red, ms=2, msw = 0, imag(l1), label="")
 	scatter!(A0v, c=:red,ms=2, msw = 0, imag(l2), label="")
 	scatter!(A0v, c=:red,ms=2, msw = 0, imag(l3), label="")
-	p3 = scatter(A0v, c=:black, ms=2, msw = 0, abs.(l1), label="")
-	scatter!(A0v, c=:black,ms=2, msw = 0,  abs.(l2), label="")
-	scatter!(A0v, c=:black, ms=2, msw = 0, abs.(l3), label="")
-	plot!([A0v[1],A0v[end]],[1,1],c=:black,ls=:dash)
+	scatter!(A0v[d1],imag(l1[d1]), ms=3, c=:green, label="")
+	scatter!(A0v[d2],imag(l2[d2]), ms=3, c=:green, label="")
+	scatter!(A0v[d3],imag(l3[d3]), ms=3, c=:green, label="")
+	for d in d1 plot!([A0v[d],A0v[d]],[-1.2,1.5],c=:black,label=""); end
+	for d in d2 plot!([A0v[d],A0v[d]],[-1.2,1.5],c=:black,label=""); end
+	for d in d3 plot!([A0v[d],A0v[d]],[-1.2,1.5],c=:black,label=""); end
+	p3 = scatter(real(l1), c=:blue, ms=2, msw = 0, imag(l1), label="")
+	scatter!(real(l2), c=:blue, ms=2, msw = 0, imag(l2), label="")
+	scatter!(real(l3), c=:blue, ms=2, msw = 0, imag(l3), label="")
+	plot!(cos.(0:pi/100:2*pi),sin.(0:pi/100:2*pi),label="")
 	plot(p1,p2,p3,layout=(1,3),size=(1200,300))
 end	
 
@@ -1820,7 +1834,7 @@ version = "1.8.1+0"
 # ╠═0522b113-d748-4bbf-9e43-1e28cb350400
 # ╠═c860a15e-bfc7-443e-b85f-8f37b60b8db0
 # ╠═b707dd27-135b-4423-a82c-74b9357714aa
-# ╟─fc20e05c-d670-47b4-8573-b3ce69c4e09a
+# ╠═fc20e05c-d670-47b4-8573-b3ce69c4e09a
 # ╠═ddc765b0-6233-4dca-9333-47c2a37cd7ee
 # ╟─660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
 # ╟─00000000-0000-0000-0000-000000000001
