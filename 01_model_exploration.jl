@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.9
 
 using Markdown
 using InteractiveUtils
@@ -17,7 +17,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ ea80d620-384b-11f0-0d10-7bb03a1c35e5
-using Plots, PlutoUI, DynamicalSystems, Images
+using Plots, PlutoUI, DynamicalSystems, Images, LinearAlgebra
 
 # ╔═╡ 18b892a9-d08a-4999-acf9-7432f51f5301
 begin
@@ -38,6 +38,18 @@ function adaptive(u,par,t)
 	return  SVector(pn, yn, Tn, sn)
 end	
 
+# ╔═╡ 7cfdf18c-48e6-4b21-8e2e-a5e5d04ac39a
+function adaptives(u,par,t)
+	q, y, T = u
+	a, b, c, d, α, β, γ, δ, A, B, τ = par
+	e = q - T
+	x = y - T
+	qn = a*e + b*x + + α*e^3 + β*e*x^2 + γ*x^3 + T
+	yn = c*e + d*x + δ*e^2 + T
+	Tn = A*e + B*(T - τ) + T
+	return  SVector(qn, yn, Tn)
+end	
+
 # ╔═╡ fb61dca8-a8ad-4d6e-ac13-a89b76a49cda
 md"""
 A : $(@bind A Slider(-3:0.01:3, default=0.0, show_value=true)) \
@@ -56,21 +68,44 @@ u0 = [0, 500, Tpost, 500.0]
 ds = DiscreteDynamicalSystem(adaptive, u0, p);
 
 # ╔═╡ 66ab0fe5-9489-4df0-8391-a0f92a2ec0a8
-tr, t = trajectory(ds, 30);
+tr, t = trajectory(ds, 90);
+
+# ╔═╡ 891aad8f-7578-4e7d-9ec3-59bad3914b48
+u02 = [500.0, 500.0, Tpost]
+
+# ╔═╡ 4fa5988f-11e3-489b-b515-407f8e65adf6
+ds2 = DiscreteDynamicalSystem(adaptives, u02, p);
+
+# ╔═╡ d050089b-1114-4c0a-995c-29b622979f5e
+tr2, t2 = trajectory(ds2, 90);
 
 # ╔═╡ 100c7668-e4fe-4abf-ba0a-8a4e645a29dc
 begin
 	plot(LinRange(-109,97,size(img)[1]),LinRange(-110,99,size(img)[2]),img,yflip=true)
-	plot!(Matrix(tr)[:,1]-(Matrix(tr)[:,3]-Matrix(tr)[:,4]),-Matrix(tr)[:,2] .+ Tpost,m=:circle,c=:red,xlabel="eₙ",ylabel="yₙ-Tpost",title="A = $A B = $B Tpost=$Tpost",size=(600,600),ylims=(-90,90),xlims=(-90,90),label="")
+	plot!(Matrix(tr)[:,1]-(Matrix(tr)[:,3]-Matrix(tr)[:,4]),-Matrix(tr)[:,2] .+ Tpost,m=:circle,c=:red,label="")
+	plot!(Matrix(tr2)[:,1]-Matrix(tr2)[:,3],-Matrix(tr)[:,2] .+ Tpost,m=:cross,c=:blue,xlabel="eₙ",ylabel="yₙ-Tpost",title="A = $A B = $B Tpost=$Tpost",size=(600,600),ylims=(-90,90),xlims=(-90,90),label="")
 end
 
 # ╔═╡ 556054f7-ce6f-4248-918d-0f544f2b64a9
 begin
 	p1 = plot(LinRange(-3.4,3.3,size(img2)[1]),LinRange(-3.4,3.3,size(img2)[2]),img2,yflip=false)
 	scatter!([A],[B],ylims=(-3,3),xlims=(-3,3),xlabel="A",ylabel="B",label="")
-	p2 = plot(Matrix(tr)[:,1]-(Matrix(tr)[:,3]-Matrix(tr)[:,4]),Matrix(tr)[:,3],m=:circle,c=:blue,xlabel="eₙ",ylabel="Tₙ",title="A = $A B = $B Tpost=$Tpost",label="")
+	p2 = plot(Matrix(tr)[:,1]+Matrix(tr)[:,4]-Matrix(tr)[:,3],Matrix(tr)[:,3],m=:circle,ms=2,c=:red,label="")
+	plot!(Matrix(tr2)[:,1]-Matrix(tr2)[:,3],Matrix(tr2)[:,3],m=:cross,ms=2,c=:blue,xlabel="eₙ",ylabel="Tₙ",title="A = $A B = $B Tpost=$Tpost",label="")
 	plot(p1,p2,layout=(1,2),size=(1200,600))
 end
+
+# ╔═╡ 06b25dbb-87ae-4755-880f-59e3aadaebfa
+lyapunovspectrum(ds2,60)
+
+# ╔═╡ 91c7ac9c-62f6-429f-94b2-4cd29561cc59
+a, b, c, d, α, β, γ, δ, A_, B_, τ = p
+
+# ╔═╡ 9d138d9a-8d62-4c71-bf10-b75c67ec74f4
+M = [a b 1-(a+b); c d 1-(c+d); A_ 0 (1-A_+B_)]
+
+# ╔═╡ 467fa767-1d19-494d-931b-eb72117d63b5
+eigen(M).values
 
 # ╔═╡ 660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
 html"""
@@ -89,6 +124,7 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 DynamicalSystems = "61744808-ddfa-5f27-97ff-6e42cc95d634"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
@@ -105,7 +141,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.4"
 manifest_format = "2.0"
-project_hash = "59c7fa8b20376914e88aefdae74124357f3efd3c"
+project_hash = "fa33ef9a139e64abee0f22cc75541cff030d6397"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "e2478490447631aedba0823d4d7a80b2cc8cdb32"
@@ -2839,13 +2875,21 @@ version = "1.8.1+0"
 # ╠═ea80d620-384b-11f0-0d10-7bb03a1c35e5
 # ╠═18b892a9-d08a-4999-acf9-7432f51f5301
 # ╠═78b728f8-6991-4fe3-b2aa-cedb6e6629cf
+# ╠═7cfdf18c-48e6-4b21-8e2e-a5e5d04ac39a
 # ╠═3e84b871-39da-4505-98cc-09741affa5be
 # ╠═48b0c7eb-fbd4-4310-b11c-48ab56e89334
 # ╠═71a4c8d3-ec3b-4c26-b3ea-3d421fd85f5a
+# ╠═891aad8f-7578-4e7d-9ec3-59bad3914b48
+# ╠═4fa5988f-11e3-489b-b515-407f8e65adf6
 # ╠═66ab0fe5-9489-4df0-8391-a0f92a2ec0a8
+# ╠═d050089b-1114-4c0a-995c-29b622979f5e
 # ╠═100c7668-e4fe-4abf-ba0a-8a4e645a29dc
 # ╟─fb61dca8-a8ad-4d6e-ac13-a89b76a49cda
 # ╠═556054f7-ce6f-4248-918d-0f544f2b64a9
+# ╠═467fa767-1d19-494d-931b-eb72117d63b5
+# ╠═06b25dbb-87ae-4755-880f-59e3aadaebfa
+# ╠═91c7ac9c-62f6-429f-94b2-4cd29561cc59
+# ╠═9d138d9a-8d62-4c71-bf10-b75c67ec74f4
 # ╟─660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
