@@ -17,7 +17,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ ea80d620-384b-11f0-0d10-7bb03a1c35e5
-using Plots, PlutoUI, DynamicalSystems, Images, LinearAlgebra
+using Plots, PlutoUI, DynamicalSystems, Images, LinearAlgebra, JLD2
 
 # ╔═╡ 18b892a9-d08a-4999-acf9-7432f51f5301
 begin
@@ -50,6 +50,24 @@ function adaptives(u,par,t)
 	return  SVector(qn, yn, Tn)
 end	
 
+# ╔═╡ 3f1edc7e-c071-4eaa-b087-6f4a4fadce3d
+function adaptive3(u,par,t)
+	e, x, s = u
+	a, b, c, d, α, β, γ, δ, A, B, τ = par
+	en = (a-A)*e + b*x + + α*e^3 + β*e*x^2 + γ*x^3 - B*s
+	xn = (c-A)*e + d*x + δ*e^2 - B*s
+	sn = A*e + (B+1)*s 
+	return  SVector(en, xn, sn)
+end	
+
+# ╔═╡ 15bacfd4-76c4-4d63-b4fd-be63985e1e14
+begin
+	cp = jldopen("./critical_points2.jld2")
+	critical_points = cp["critical_points"]
+	A0_v = cp["A0_v"]
+	B0_v = cp["B0_v"]
+end
+
 # ╔═╡ fb61dca8-a8ad-4d6e-ac13-a89b76a49cda
 md"""
 A : $(@bind A Slider(-3:0.01:3, default=0.0, show_value=true)) \
@@ -60,6 +78,9 @@ Tpost : $(@bind Tpost Slider(420:10:580, default=500, show_value=true)) \
 # ╔═╡ 3e84b871-39da-4505-98cc-09741affa5be
 # parameters for Type I
 p = [ 0.981, 0.266, -0.823, 0.0238, -2.21e-5, -7.84e-5, 5.34e-5, 3.35e-3, A, B, 500]
+
+# ╔═╡ f9466967-343c-409d-b515-44c538ad3455
+p3 = [ 0.981, 0.266, -0.823, 0.0238, -2.21e-5, -7.84e-5, 5.34e-5, 3.35e-3, A, B, 0]
 
 # ╔═╡ 48b0c7eb-fbd4-4310-b11c-48ab56e89334
 u0 = [0, 500, Tpost, 500.0]
@@ -79,27 +100,58 @@ ds2 = DiscreteDynamicalSystem(adaptives, u02, p);
 # ╔═╡ d050089b-1114-4c0a-995c-29b622979f5e
 tr2, t2 = trajectory(ds2, 90);
 
-# ╔═╡ 100c7668-e4fe-4abf-ba0a-8a4e645a29dc
-begin
-	plot(LinRange(-109,97,size(img)[1]),LinRange(-110,99,size(img)[2]),img,yflip=true)
-	plot!(Matrix(tr)[:,1]-(Matrix(tr)[:,3]-Matrix(tr)[:,4]),-Matrix(tr)[:,2] .+ Tpost,m=:circle,c=:red,label="")
-	plot!(Matrix(tr2)[:,1]-Matrix(tr2)[:,3],-Matrix(tr)[:,2] .+ Tpost,m=:cross,c=:blue,xlabel="eₙ",ylabel="yₙ-Tpost",title="A = $A B = $B Tpost=$Tpost",size=(600,600),ylims=(-90,90),xlims=(-90,90),label="")
-end
-
-# ╔═╡ 556054f7-ce6f-4248-918d-0f544f2b64a9
-begin
-	p1 = plot(LinRange(-3.4,3.3,size(img2)[1]),LinRange(-3.4,3.3,size(img2)[2]),img2,yflip=false)
-	scatter!([A],[B],ylims=(-3,3),xlims=(-3,3),xlabel="A",ylabel="B",label="")
-	p2 = plot(Matrix(tr)[:,1]+Matrix(tr)[:,4]-Matrix(tr)[:,3],Matrix(tr)[:,3],m=:circle,ms=2,c=:red,label="")
-	plot!(Matrix(tr2)[:,1]-Matrix(tr2)[:,3],Matrix(tr2)[:,3],m=:cross,ms=2,c=:blue,xlabel="eₙ",ylabel="Tₙ",title="A = $A B = $B Tpost=$Tpost",label="")
-	plot(p1,p2,layout=(1,2),size=(1200,600))
-end
+# ╔═╡ 7374a14a-306a-4f14-80b4-169b304bed9b
+tr2
 
 # ╔═╡ 06b25dbb-87ae-4755-880f-59e3aadaebfa
 lyapunovspectrum(ds2,60)
 
 # ╔═╡ 91c7ac9c-62f6-429f-94b2-4cd29561cc59
 a, b, c, d, α, β, γ, δ, A_, B_, τ = p
+
+# ╔═╡ 04b0b1cc-9d82-4ac1-8c7f-3d8bc0590ca2
+u03 = [500.0-Tpost, 500.0-Tpost, Tpost-τ]
+
+# ╔═╡ 948df112-f611-4b5b-9a21-9c10e1f798fe
+ds3 = DiscreteDynamicalSystem(adaptive3, u03, p3);
+
+# ╔═╡ 5a2605d6-705a-459d-a8cf-a298840819b3
+tr3, t3 = trajectory(ds3, 90);
+
+# ╔═╡ 834b7679-4b23-4b9a-9521-b51db4cff97d
+tr3
+
+# ╔═╡ 100c7668-e4fe-4abf-ba0a-8a4e645a29dc
+begin
+	plot(LinRange(-109,97,size(img)[1]),LinRange(-110,99,size(img)[2]),img,yflip=true)
+	plot!(Matrix(tr)[:,1]-(Matrix(tr)[:,3]-Matrix(tr)[:,4]),-Matrix(tr)[:,2] .+ Tpost,m=:circle,c=:red,label="")
+	plot!(Matrix(tr2)[:,1]-Matrix(tr2)[:,3],-Matrix(tr)[:,2] .+ Tpost,m=:cross,c=:blue,xlabel="eₙ",ylabel="yₙ-Tpost",title="A = $A B = $B Tpost=$Tpost",size=(600,600),xlims=(-90,90),ylims=(-90,90),label="")
+	plot!(Matrix(tr3)[:,1],-Matrix(tr3)[:,2],m=:square,c=:green,label="")
+end
+
+# ╔═╡ 45a4d023-b902-4454-b20b-4d9c6cc58788
+c-A
+
+# ╔═╡ 556054f7-ce6f-4248-918d-0f544f2b64a9
+begin
+	p1 = plot(LinRange(-3.4,3.3,size(img2)[1]),LinRange(-3.4,3.3,size(img2)[2]),img2,yflip=false)
+	fold = @. critical_points[getindex(critical_points,3) == 1]
+	scatter!(getindex.(fold,1),getindex.(fold,2),ms=2,msw=0,c=:red,label="fold")
+	flip = @. critical_points[getindex(critical_points,3) == 2]
+	scatter!(getindex.(flip,1),getindex.(flip,2),ms=2,msw=0,c=:blue,label="flip")
+	ns = @. critical_points[getindex(critical_points,3) == 3]
+	scatter!(getindex.(ns,1),getindex.(ns,2),ms=2,msw=0,c=:green,label="NS")
+	fc = @. critical_points[getindex(critical_points,3) == 4]
+	scatter!(getindex.(fc,1),getindex.(fc,2),ms=2,msw=0,c=:orange,label="")
+	plot!(A0_v,A0_v*0,c=:black,ls=:dash,label="")
+	plot!(B0_v*0,B0_v,c=:black,ls=:dash,label="")
+	scatter!([A],[B],ylims=(-3,3),xlims=(-3,3),xlabel="A",ylabel="B",label="")
+	p2 = plot(Matrix(tr)[:,1]+Matrix(tr)[:,4]-Matrix(tr)[:,3],Matrix(tr)[:,3].-τ,m=:circle,ms=2,c=:red,label="")
+	plot!(Matrix(tr2)[:,1]-Matrix(tr2)[:,3],Matrix(tr2)[:,3].-τ,m=:cross,ms=2,c=:blue,label="")
+	plot!(Matrix(tr3)[:,1],Matrix(tr3)[:,3],m=:square,ms=2,c=:white,xlabel="eₙ",ylabel="Tₙ",title="A = $A B = $B Tpost=$Tpost",label="")
+	scatter!([0],[0],c=:white,ms=6,label="fp")
+	plot(p1,p2,layout=(1,2),size=(1200,600))
+end
 
 # ╔═╡ 9d138d9a-8d62-4c71-bf10-b75c67ec74f4
 M = [a b 1-(a+b); c d 1-(c+d); A_ 0 (1-A_+B_)]
@@ -124,6 +176,7 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 DynamicalSystems = "61744808-ddfa-5f27-97ff-6e42cc95d634"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
@@ -131,6 +184,7 @@ PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 [compat]
 DynamicalSystems = "~3.3.26"
 Images = "~0.26.1"
+JLD2 = "~0.4.54"
 Plots = "~1.40.13"
 PlutoUI = "~0.7.62"
 """
@@ -139,9 +193,9 @@ PlutoUI = "~0.7.62"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.4"
+julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "fa33ef9a139e64abee0f22cc75541cff030d6397"
+project_hash = "04bf2236c902eb462bac6007dcb1b967f00bfd45"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "e2478490447631aedba0823d4d7a80b2cc8cdb32"
@@ -1708,7 +1762,7 @@ version = "2.5.4+0"
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.1+4"
+version = "0.8.5+0"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
@@ -2876,14 +2930,23 @@ version = "1.8.1+0"
 # ╠═18b892a9-d08a-4999-acf9-7432f51f5301
 # ╠═78b728f8-6991-4fe3-b2aa-cedb6e6629cf
 # ╠═7cfdf18c-48e6-4b21-8e2e-a5e5d04ac39a
+# ╠═3f1edc7e-c071-4eaa-b087-6f4a4fadce3d
 # ╠═3e84b871-39da-4505-98cc-09741affa5be
+# ╠═f9466967-343c-409d-b515-44c538ad3455
 # ╠═48b0c7eb-fbd4-4310-b11c-48ab56e89334
 # ╠═71a4c8d3-ec3b-4c26-b3ea-3d421fd85f5a
 # ╠═891aad8f-7578-4e7d-9ec3-59bad3914b48
 # ╠═4fa5988f-11e3-489b-b515-407f8e65adf6
+# ╠═04b0b1cc-9d82-4ac1-8c7f-3d8bc0590ca2
+# ╠═948df112-f611-4b5b-9a21-9c10e1f798fe
 # ╠═66ab0fe5-9489-4df0-8391-a0f92a2ec0a8
 # ╠═d050089b-1114-4c0a-995c-29b622979f5e
+# ╠═7374a14a-306a-4f14-80b4-169b304bed9b
+# ╠═45a4d023-b902-4454-b20b-4d9c6cc58788
+# ╠═5a2605d6-705a-459d-a8cf-a298840819b3
+# ╠═834b7679-4b23-4b9a-9521-b51db4cff97d
 # ╠═100c7668-e4fe-4abf-ba0a-8a4e645a29dc
+# ╠═15bacfd4-76c4-4d63-b4fd-be63985e1e14
 # ╟─fb61dca8-a8ad-4d6e-ac13-a89b76a49cda
 # ╠═556054f7-ce6f-4248-918d-0f544f2b64a9
 # ╠═467fa767-1d19-494d-931b-eb72117d63b5

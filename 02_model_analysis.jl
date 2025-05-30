@@ -5,37 +5,65 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ ea80d620-384b-11f0-0d10-7bb03a1c35e5
-using Plots, Symbolics, Nemo
+using Plots, Symbolics, Nemo, JLD2
 
 # ╔═╡ ebcc5b2f-2ec2-47db-ba07-fe986de6ef83
-@variables A,B,x
+@variables A,B,x,a_,b_,c_,d_
 
 # ╔═╡ 1b2c9546-a860-4788-8542-d1bd39518175
 a,b,c,d = [ 0.981, 0.266, -0.823, 0.0238]
 
+# ╔═╡ 264d65a1-500a-4125-8281-7ce8d3c69366
+begin
+	C = a*d-b*c
+	D = b-d
+	E = a+d
+end	
+
 # ╔═╡ ead7952f-ae9c-49b6-98ff-bd20a6a573e5
-expr = (a-x)*(d-x)*(1-A+B-x)-b*c*(1-A+B-x)+b*A*(1-c-d)+A*(1-a-b)*(d-x)
+expr = (a-x)*(d-x)*(1-A+B-x)-b*c*(1-A+B-x)+b*A*(1-c-d)-A*(1-a-b)*(d-x)
+
+# ╔═╡ 6ad63230-f8f8-4a7d-a929-de179f7cda80
+exprb = B*A*(d-x-b)+(B+1-x)*((d-x)*(a-A-x)-b*(c-A))
+
+# ╔═╡ 887e0701-ef45-4ce4-9c9a-014804ac4f07
+exprc = C + D*A + C*B - (C+E)*x + (1-D)*A*x - E*B*x + (1+E)*x^2 - A*x^2 + B*x^2 - x^3
+
+# ╔═╡ 992248e9-a787-4f11-90bc-b567b4ed5eeb
+exprb2 = expand(exprb)
 
 # ╔═╡ a4697c28-367e-497c-9fb5-bd35600585ee
 expr2 = expand(expr)
 
 # ╔═╡ 0522b113-d748-4bbf-9e43-1e28cb350400
-sol = symbolic_solve(expr2, x)
+sol = symbolic_solve(exprb2, x)
 
-# ╔═╡ c860a15e-bfc7-443e-b85f-8f37b60b8db0
-sol2 = Symbolics.solve_univar(expr2,x)
+# ╔═╡ fa936c85-2a4b-4a03-b7db-dcfc905b62eb
+simplify(sol)
 
 # ╔═╡ b707dd27-135b-4423-a82c-74b9357714aa
 begin
-	A0v = -1:0.002:1
-	B0 = -1.5
+	A0v = -0.19118:0.0000001:-0.19115
+	B0 = -0.000000000001
 	l1 = [substitute(sol[1], Dict([A => A0, B=> B0])) for A0 in A0v];
 	l2 = [substitute(sol[2], Dict([A => A0, B=> B0])) for A0 in A0v];
 	l3 = [substitute(sol[3], Dict([A => A0, B=> B0])) for A0 in A0v];
-	d1 = findall(diff(abs.(l1) .> 1) .!= 0.0)
-	d2 = findall(diff(abs.(l2) .> 1) .!= 0.0)
-	d3 = findall(diff(abs.(l3) .> 1) .!= 0.0)
+	d1 = findall(diff(abs.(l1) .> 2) .!= 0.0 .&& abs.(diff(abs.(l1))) .<  0.01)
+	d2 = findall(diff(abs.(l2) .> 2) .!= 0.0 .&& abs.(diff(abs.(l2))) .<  0.01)
+	d3 = findall(diff(abs.(l3) .> 2) .!= 0.0 .&& abs.(diff(abs.(l3))) .<  0.01)
+	f1 = findall(diff(abs.(imag(l1)) .> 1e-12) .!= 0.0 )
+	f2 = findall(diff(abs.(imag(l2)) .> 1e-12) .!= 0.0 )
+	f3 = findall(diff(abs.(imag(l3)) .> 1e-12) .!= 0.0 )
 end	
+
+# ╔═╡ 7495a957-889d-40c0-a25f-204849e8a380
+l1[f1]
+
+# ╔═╡ 9bb2d8a7-3da1-450a-b994-705897535ee9
+A0v[f2]
+
+# ╔═╡ d01f2d92-db6f-4b4f-8930-6734fc5e5d5f
+A0v[f3]
 
 # ╔═╡ fc20e05c-d670-47b4-8573-b3ce69c4e09a
 begin
@@ -60,16 +88,103 @@ begin
 	p3 = scatter(real(l1), c=:blue, ms=2, msw = 0, imag(l1), label="")
 	scatter!(real(l2), c=:blue, ms=2, msw = 0, imag(l2), label="")
 	scatter!(real(l3), c=:blue, ms=2, msw = 0, imag(l3), label="")
-	plot!(cos.(0:pi/100:2*pi),sin.(0:pi/100:2*pi),label="")
+	plot!(cos.(0:pi/100:2*pi),sin.(0:pi/100:2*pi),xlims=(0.9,1.1),ylims=(-0.1,0.1),label="")
 	plot(p1,p2,p3,layout=(1,3),size=(1200,300))
 end	
 
-# ╔═╡ ddc765b0-6233-4dca-9333-47c2a37cd7ee
+# ╔═╡ 9585b653-112f-4fb4-85e6-9a925b720c13
+cp = jldopen("./critical_points2.jld2")
+
+# ╔═╡ 6187a33b-3d80-49f1-aae4-127d50d0f814
+typeof(A0v)
+
+# ╔═╡ cb8dc4c6-93ef-49ab-a854-8fdee418d3b2
+function find_critical!(critical_points::Vector{Any},sol,A0v::StepRangeLen,B0::Float64;threshold::Float64=0.01)
+	lambda = [substitute(sol, Dict([A => A0, B=> B0])) for A0 in A0v];
+	dd = findall(diff(abs.(lambda) .> 1) .!= 0.0 .&& abs.(diff(abs.(lambda))) .<  threshold)
+	ff = findall(diff(abs.(imag(lambda)) .> 1e-12) .!= 0.0 )
+	for d in dd
+		if abs(imag(lambda[d])) < 1e-12
+			if real(lambda[d]) > 0
+				# fold
+				push!(critical_points,[A0v[d],B0,1])
+			else
+				#flip
+				push!(critical_points,[A0v[d],B0,2])
+			end	
+		else
+			# Neimark Sacker
+			push!(critical_points,[A0v[d],B0,3])
+		end	
+	end
+	for f in ff
+		push!(critical_points,[A0v[f],B0,4])
+	end
+	return nothing
+end
+
+# ╔═╡ 8b5ca24d-f4c2-4851-826d-50af5d5f7245
+function find_critical!(critical_points::Vector{Any},sol,A0::Float64,B0v::StepRangeLen;threshold::Float64=0.01)
+	lambda = [substitute(sol, Dict([A => A0, B=> B0])) for B0 in B0v];
+	dd = findall(diff(abs.(lambda) .> 1) .!= 0.0 .&& abs.(diff(abs.(lambda))) .<  threshold)
+	ff = findall(diff(abs.(imag(lambda)) .> 1e-12) .!= 0.0 )
+	for d in dd
+		if abs(imag(lambda[d])) < 1e-12
+			if real(lambda[d]) > 0
+				# fold
+				push!(critical_points,[A0,B0v[d],1])
+			else
+				#flip
+				push!(critical_points,[A0,B0v[d],2])
+			end	
+		else
+			# Neimark Sacker
+			push!(critical_points,[A0,B0v[d],3])
+		end	
+	end	
+	for f in ff
+		push!(critical_points,[A0,B0v[f],4])
+	end
+	return nothing
+end
+
+# ╔═╡ ea8b4fa2-cfc7-42ee-8c1b-4f43377617cf
+# ╠═╡ disabled = true
+#=╠═╡
+jldsave("critical_points2.jld2";critical_points,A0_v,B0_v)
+  ╠═╡ =#
+
+# ╔═╡ d8e8eaee-5a41-44ca-bb71-4933d194ab37
 begin
-	scatter(real(l1), c=:blue, ms=2, msw = 0, imag(l1), label="")
-	scatter!(real(l2), c=:blue, ms=2, msw = 0, imag(l2), label="")
-	scatter!(real(l3), c=:blue, ms=2, msw = 0, imag(l3), label="",size=(300,300))
-	plot!(cos.(0:pi/100:2*pi),sin.(0:pi/100:2*pi),label="")
+	A0_v2 = 0.1:-0.001:-0.1
+	B0_v2 = 0.1:-0.001:-2.0
+	critical_points2 = []
+	for B0 in B0_v2
+		for n=1:3
+			find_critical!(critical_points2,sol[n],A0_v2,B0;threshold=0.3)
+		end	
+	end	
+end	
+
+# ╔═╡ 8f4ab40b-c078-4577-bb8b-16bfb0bf1fd9
+@. critical_points2[getindex(critical_points2,3) == 4]
+
+# ╔═╡ 38935f11-f6ee-47d1-b29e-1f4378324bb5
+begin
+	fold = @. critical_points[getindex(critical_points,3) == 1]
+	scatter(getindex.(fold,1),getindex.(fold,2),ms=2,msw=0,c=:red,label="fold")
+	flip = @. critical_points[getindex(critical_points,3) == 2]
+	scatter!(getindex.(flip,1),getindex.(flip,2),ms=2,msw=0,c=:blue,label="flip")
+	ns = @. critical_points[getindex(critical_points,3) == 3]
+	scatter!(getindex.(ns,1),getindex.(ns,2),ms=2,msw=0,c=:green,label="NS")
+	fc = @. critical_points[getindex(critical_points,3) == 4]
+	scatter!(getindex.(fc,1),getindex.(fc,2),ms=2,msw=0,c=:orange,label="")
+	ns2 = @. critical_points2[getindex(critical_points2,3) == 3]
+	scatter!(getindex.(ns2,1),getindex.(ns2,2),m=:cross,ms=2,c=:green,label="NS")
+	fc2 = @. critical_points2[getindex(critical_points2,3) == 4]
+	scatter!(getindex.(fc2,1),getindex.(fc2,2),m=:cross,ms=2,c=:orange,label="")
+	plot!(A0_v,A0_v*0,c=:black,label="")
+	plot!(B0_v*0,B0_v,c=:black,label="",xlims=(-0.4,0.2))
 end	
 
 # ╔═╡ 660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
@@ -84,14 +199,38 @@ input[type*="range"] {
 </style>
 """
 
+# ╔═╡ 39e527db-59fd-4710-af55-f7e8720baf4d
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	A0_v = -1.5:0.002:0.5
+	B0_v = 0.1:-0.002:-2.0
+	critical_points = []
+	for A0 in A0_v
+		for n=1:3
+			find_critical!(critical_points,sol[n],A0,B0_v;threshold=0.3)
+		end	
+	end	
+end	
+  ╠═╡ =#
+
+# ╔═╡ 6c55b081-a3b2-4ff9-8574-6eea2dd3ecf8
+begin 
+	critical_points = cp["critical_points"]
+	A0_v = cp["A0_v"]
+	B0_v = cp["B0_v"]
+end;	
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 Nemo = "2edaba10-b0f1-5616-af89-8c11ac63239a"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [compat]
+JLD2 = "~0.4.54"
 Nemo = "~0.49.5"
 Plots = "~1.40.13"
 Symbolics = "~6.40.0"
@@ -101,9 +240,9 @@ Symbolics = "~6.40.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.4"
+julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "2e4b07646d0312914f065720304f3e05e548cb6e"
+project_hash = "49d7dca7fedcbc643522fd93ff14f7064c3cbc51"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "e2478490447631aedba0823d4d7a80b2cc8cdb32"
@@ -492,6 +631,16 @@ git-tree-sha1 = "c08ef035014de2a925098c4df99d44f223476705"
 uuid = "e134572f-a0d5-539d-bddf-3cad8db41a82"
 version = "300.200.201+0"
 
+[[deps.FileIO]]
+deps = ["Pkg", "Requires", "UUIDs"]
+git-tree-sha1 = "b66970a70db13f45b7e57fbda1736e1cf72174ea"
+uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+version = "1.17.0"
+weakdeps = ["HTTP"]
+
+    [deps.FileIO.extensions]
+    HTTPExt = "HTTP"
+
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 version = "1.11.0"
@@ -663,6 +812,12 @@ version = "0.2.4"
 git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
 uuid = "82899510-4779-5014-852e-03e436cf321d"
 version = "1.0.0"
+
+[[deps.JLD2]]
+deps = ["FileIO", "MacroTools", "Mmap", "OrderedCollections", "PrecompileTools", "Requires", "TranscodingStreams"]
+git-tree-sha1 = "89e1e5c3d43078d42eed2306cab2a11b13e5c6ae"
+uuid = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+version = "0.4.54"
 
 [[deps.JLFzf]]
 deps = ["REPL", "Random", "fzf_jll"]
@@ -943,7 +1098,7 @@ version = "0.3.27+1"
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.1+4"
+version = "0.8.5+0"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
@@ -1829,13 +1984,29 @@ version = "1.8.1+0"
 # ╠═ea80d620-384b-11f0-0d10-7bb03a1c35e5
 # ╠═ebcc5b2f-2ec2-47db-ba07-fe986de6ef83
 # ╠═1b2c9546-a860-4788-8542-d1bd39518175
+# ╠═264d65a1-500a-4125-8281-7ce8d3c69366
 # ╠═ead7952f-ae9c-49b6-98ff-bd20a6a573e5
+# ╠═6ad63230-f8f8-4a7d-a929-de179f7cda80
+# ╠═887e0701-ef45-4ce4-9c9a-014804ac4f07
+# ╠═992248e9-a787-4f11-90bc-b567b4ed5eeb
 # ╠═a4697c28-367e-497c-9fb5-bd35600585ee
 # ╠═0522b113-d748-4bbf-9e43-1e28cb350400
-# ╠═c860a15e-bfc7-443e-b85f-8f37b60b8db0
+# ╠═fa936c85-2a4b-4a03-b7db-dcfc905b62eb
 # ╠═b707dd27-135b-4423-a82c-74b9357714aa
+# ╠═7495a957-889d-40c0-a25f-204849e8a380
+# ╠═9bb2d8a7-3da1-450a-b994-705897535ee9
+# ╠═d01f2d92-db6f-4b4f-8930-6734fc5e5d5f
 # ╠═fc20e05c-d670-47b4-8573-b3ce69c4e09a
-# ╠═ddc765b0-6233-4dca-9333-47c2a37cd7ee
+# ╠═39e527db-59fd-4710-af55-f7e8720baf4d
+# ╠═ea8b4fa2-cfc7-42ee-8c1b-4f43377617cf
+# ╠═9585b653-112f-4fb4-85e6-9a925b720c13
+# ╠═6c55b081-a3b2-4ff9-8574-6eea2dd3ecf8
+# ╠═d8e8eaee-5a41-44ca-bb71-4933d194ab37
+# ╠═8f4ab40b-c078-4577-bb8b-16bfb0bf1fd9
+# ╠═38935f11-f6ee-47d1-b29e-1f4378324bb5
+# ╠═6187a33b-3d80-49f1-aae4-127d50d0f814
+# ╠═cb8dc4c6-93ef-49ab-a854-8fdee418d3b2
+# ╠═8b5ca24d-f4c2-4851-826d-50af5d5f7245
 # ╟─660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
