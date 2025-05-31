@@ -43,8 +43,8 @@ simplify(sol)
 
 # ╔═╡ b707dd27-135b-4423-a82c-74b9357714aa
 begin
-	A0v = -0.19118:0.0000001:-0.19115
-	B0 = -0.000000000001
+	A0v = -2:0.01:1
+	B0 = 0
 	l1 = [substitute(sol[1], Dict([A => A0, B=> B0])) for A0 in A0v];
 	l2 = [substitute(sol[2], Dict([A => A0, B=> B0])) for A0 in A0v];
 	l3 = [substitute(sol[3], Dict([A => A0, B=> B0])) for A0 in A0v];
@@ -88,15 +88,30 @@ begin
 	p3 = scatter(real(l1), c=:blue, ms=2, msw = 0, imag(l1), label="")
 	scatter!(real(l2), c=:blue, ms=2, msw = 0, imag(l2), label="")
 	scatter!(real(l3), c=:blue, ms=2, msw = 0, imag(l3), label="")
-	plot!(cos.(0:pi/100:2*pi),sin.(0:pi/100:2*pi),xlims=(0.9,1.1),ylims=(-0.1,0.1),label="")
+	plot!(cos.(0:pi/100:2*pi),sin.(0:pi/100:2*pi),label="")
 	plot(p1,p2,p3,layout=(1,3),size=(1200,300))
 end	
 
-# ╔═╡ 9585b653-112f-4fb4-85e6-9a925b720c13
-cp = jldopen("./critical_points2.jld2")
+# ╔═╡ 39e527db-59fd-4710-af55-f7e8720baf4d
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	A0_v = -1.5:0.002:0.5
+	B0_v = 0.1:-0.002:-2.0
+	critical_points = []
+	for A0 in A0_v
+		for n=1:3
+			find_critical!(critical_points,sol[n],A0,B0_v;threshold=0.3)
+		end	
+	end	
+end	
+  ╠═╡ =#
 
-# ╔═╡ 6187a33b-3d80-49f1-aae4-127d50d0f814
-typeof(A0v)
+# ╔═╡ ea8b4fa2-cfc7-42ee-8c1b-4f43377617cf
+# ╠═╡ disabled = true
+#=╠═╡
+jldsave("critical_points2.jld2";critical_points,A0_v,B0_v)
+  ╠═╡ =#
 
 # ╔═╡ cb8dc4c6-93ef-49ab-a854-8fdee418d3b2
 function find_critical!(critical_points::Vector{Any},sol,A0v::StepRangeLen,B0::Float64;threshold::Float64=0.01)
@@ -148,27 +163,6 @@ function find_critical!(critical_points::Vector{Any},sol,A0::Float64,B0v::StepRa
 	return nothing
 end
 
-# ╔═╡ ea8b4fa2-cfc7-42ee-8c1b-4f43377617cf
-# ╠═╡ disabled = true
-#=╠═╡
-jldsave("critical_points2.jld2";critical_points,A0_v,B0_v)
-  ╠═╡ =#
-
-# ╔═╡ d8e8eaee-5a41-44ca-bb71-4933d194ab37
-begin
-	A0_v2 = 0.1:-0.001:-0.1
-	B0_v2 = 0.1:-0.001:-2.0
-	critical_points2 = []
-	for B0 in B0_v2
-		for n=1:3
-			find_critical!(critical_points2,sol[n],A0_v2,B0;threshold=0.3)
-		end	
-	end	
-end	
-
-# ╔═╡ 8f4ab40b-c078-4577-bb8b-16bfb0bf1fd9
-@. critical_points2[getindex(critical_points2,3) == 4]
-
 # ╔═╡ 38935f11-f6ee-47d1-b29e-1f4378324bb5
 begin
 	fold = @. critical_points[getindex(critical_points,3) == 1]
@@ -184,7 +178,7 @@ begin
 	fc2 = @. critical_points2[getindex(critical_points2,3) == 4]
 	scatter!(getindex.(fc2,1),getindex.(fc2,2),m=:cross,ms=2,c=:orange,label="")
 	plot!(A0_v,A0_v*0,c=:black,label="")
-	plot!(B0_v*0,B0_v,c=:black,label="",xlims=(-0.4,0.2))
+	plot!(B0_v*0,B0_v,c=:black,label="")
 end	
 
 # ╔═╡ 660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
@@ -199,27 +193,32 @@ input[type*="range"] {
 </style>
 """
 
-# ╔═╡ 39e527db-59fd-4710-af55-f7e8720baf4d
+# ╔═╡ 6c55b081-a3b2-4ff9-8574-6eea2dd3ecf8
+begin 
+	cp = jldopen("./critical_points2.jld2")
+	cp2 = jldopen("./critical_points2b.jld2")
+	critical_points = cp["critical_points"]
+	critical_points2 = cp2["critical_points2"]
+	A0_v = cp["A0_v"]
+	B0_v = cp["B0_v"]
+	#A0_v2 = cp2["A0_v"]
+	#B0_v2 = cp2["B0_v"]
+end;	
+
+# ╔═╡ d8e8eaee-5a41-44ca-bb71-4933d194ab37
 # ╠═╡ disabled = true
 #=╠═╡
 begin
-	A0_v = -1.5:0.002:0.5
-	B0_v = 0.1:-0.002:-2.0
-	critical_points = []
-	for A0 in A0_v
+	A0_v2 = 0.1:-0.001:-0.1
+	B0_v2 = 0.1:-0.001:-2.0
+	critical_points2 = []
+	for B0 in B0_v2
 		for n=1:3
-			find_critical!(critical_points,sol[n],A0,B0_v;threshold=0.3)
+			find_critical!(critical_points2,sol[n],A0_v2,B0;threshold=0.3)
 		end	
 	end	
 end	
   ╠═╡ =#
-
-# ╔═╡ 6c55b081-a3b2-4ff9-8574-6eea2dd3ecf8
-begin 
-	critical_points = cp["critical_points"]
-	A0_v = cp["A0_v"]
-	B0_v = cp["B0_v"]
-end;	
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -240,7 +239,7 @@ Symbolics = "~6.40.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.5"
+julia_version = "1.11.4"
 manifest_format = "2.0"
 project_hash = "49d7dca7fedcbc643522fd93ff14f7064c3cbc51"
 
@@ -1098,7 +1097,7 @@ version = "0.3.27+1"
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.5+0"
+version = "0.8.1+4"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
@@ -1998,13 +1997,10 @@ version = "1.8.1+0"
 # ╠═d01f2d92-db6f-4b4f-8930-6734fc5e5d5f
 # ╠═fc20e05c-d670-47b4-8573-b3ce69c4e09a
 # ╠═39e527db-59fd-4710-af55-f7e8720baf4d
-# ╠═ea8b4fa2-cfc7-42ee-8c1b-4f43377617cf
-# ╠═9585b653-112f-4fb4-85e6-9a925b720c13
-# ╠═6c55b081-a3b2-4ff9-8574-6eea2dd3ecf8
 # ╠═d8e8eaee-5a41-44ca-bb71-4933d194ab37
-# ╠═8f4ab40b-c078-4577-bb8b-16bfb0bf1fd9
+# ╠═ea8b4fa2-cfc7-42ee-8c1b-4f43377617cf
+# ╠═6c55b081-a3b2-4ff9-8574-6eea2dd3ecf8
 # ╠═38935f11-f6ee-47d1-b29e-1f4378324bb5
-# ╠═6187a33b-3d80-49f1-aae4-127d50d0f814
 # ╠═cb8dc4c6-93ef-49ab-a854-8fdee418d3b2
 # ╠═8b5ca24d-f4c2-4851-826d-50af5d5f7245
 # ╟─660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d

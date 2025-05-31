@@ -4,76 +4,64 @@
 using Markdown
 using InteractiveUtils
 
-# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
-macro bind(def, element)
-    #! format: off
-    return quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
-        local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-        el
-    end
-    #! format: on
-end
-
 # ╔═╡ ea80d620-384b-11f0-0d10-7bb03a1c35e5
-using Plots, Symbolics, Nemo, PlutoUI
+using Plots, Symbolics, Nemo,  StaticArrays, IntervalRootFinding, IntervalArithmetic, IntervalArithmetic.Symbols
 
 # ╔═╡ ebcc5b2f-2ec2-47db-ba07-fe986de6ef83
 @variables A,B,x,f
 
 # ╔═╡ 1b2c9546-a860-4788-8542-d1bd39518175
-a,b,c,d = [ 981/1000, 133/500, -823/1000, 238/10000]
+a,b,c,d = [ 981//1000, 133//500, -823//1000, 238//10000]
 
 # ╔═╡ f3752843-c7d8-4f57-9ec0-b17dd707c621
-α,β,γ,δ = [ -221/10000000, -784/10000000, 534/10000000, 335/100000]
+α,β,γ,δ = [ -221//10000000, -784//10000000, 534//10000000, 335//100000]
 
-# ╔═╡ db393c58-6f5a-4557-8d90-51c7c0c8bc01
-ac = rationalize(round(Float64(a*d-c*b),sigdigits=5))
-
-# ╔═╡ ffdb568f-30b6-4cdd-8a97-a68435bf6849
-a*d-c*b
-
-# ╔═╡ 4d8635b0-b713-49fc-9212-8af7716f5279
-pol1 = a*d - c*b + (b-d)*A/(B+1) - δ*b*f + α*d*f^2 + (β/d)*f^2*(A/(B+1)-c-δ*f)^2 + (γ/d^2)*f^2*(A/(B+1)-c-δ*f)^3
-
-# ╔═╡ 901776c5-5fbf-405b-8575-7a6c6731db7b
-pol10 = expand(a*d - c*b + (d-b) - δ*b*f + α*d*f^2 + (β/d)*f^2*(-1-c-δ*f)^2 + (γ/d^2)*f^2*(-1-c-δ*f)^3)
-
-# ╔═╡ 93230d00-57ac-48b1-b7f2-fd34077e81aa
-Symbolics.symbolic_to_float(symbolic_solve(pol10,f)[1])
-
-# ╔═╡ 05f892ab-be73-4d66-8ac2-fd839080c1aa
-expand(pol1)
-
-# ╔═╡ df20e954-0034-4a4f-93b4-8c28956bb5b9
-md"""
-A : $(@bind A_ Slider(-3:0.01:3, default=0.0, show_value=true)) \
-B : $(@bind B_ Slider(-3:0.01:3.0, default=0.0, show_value=true)) 
-"""
-
-# ╔═╡ 67f55099-85d6-4e75-bbf3-b9695c178e01
-ff = substitute(pol1,Dict([A => A_, B=> B_]))
-
-# ╔═╡ e28d9cd7-75f1-49c0-a23b-768e2af8c6bc
-begin 
-	farr = collect(-0.5:0.01:0.5)
-	ffeval = [substitute(pol1,Dict([A => A_, B=> B_,f=> f0])) for f0 in farr]
-	plot(farr,Symbolics.symbolic_to_float.(ffeval))
-	plot!(farr,farr*0)
-end	
+# ╔═╡ 9ccfdef9-fcf2-4ce2-9ed9-97e039f7c2d3
+a_,b_,c_,d_,α_,β_,γ_,δ_ = Float64.([a,b,c,d,α,β,γ,δ])
 
 # ╔═╡ be3fd104-b527-4662-b87d-f6cab51dc812
-x0 = (A-c)/d*f-δ/d*f^2
+x0 = f*(c-δ*f)/(1-d)
 
 # ╔═╡ 66f1c597-9215-45d3-9caf-5332d356c6ec
-vfield0 = (a-A/(B+1))*f + b*x0 +α*f^3 + β*f*x0^2+γ*x0^3
-
-# ╔═╡ 832d0860-52ff-4ee9-a5a1-e5f912916bce
-expand(vfield0)
+vfield0 = a*f + b*x0 +α*f^3 + β*f*x0^2 + γ*x0^3
 
 # ╔═╡ fe781eb7-1c76-4b1e-9ddf-0ee8950811eb
 sol_v0 = symbolic_solve(vfield0,f)
+
+# ╔═╡ c1ec9960-a22a-476c-aba5-c782405264e3
+md"""
+# Calculo numerico
+"""
+
+# ╔═╡ 5a41fe38-e6bc-47b3-b88d-58e5318e0c01
+begin
+	x0_(x) = x*(c_-δ_*x)/(1-d_)
+	vfield(x) = a_*x + b_*x0_(x) +α_*x^3 + β_*x*x0_(x)^2 + γ_*x0_(x)^3
+	X = -200..100
+    rts = IntervalRootFinding.roots(vfield, X)
+	er = [mid.(r.region) for r in rts]
+	xr = x0_.(er)
+end	
+
+# ╔═╡ 8cee9bdf-845e-48da-b465-1568b17d578e
+begin
+	farr = -300:0.1:100
+	pol = [Symbolics.symbolic_to_float(substitute(vfield0,Dict([f => f0]))) for f0 in farr]
+	plot(farr,pol,yrange=(-100,100),label="")
+	plot!(farr,farr*0,c=:black,label="")
+	scatter!(er,er*0,c=:red,label="pf")
+end	
+
+# ╔═╡ 1f946eae-6910-4149-842c-32a3d9b4ba91
+md"""
+las raices son \
+$(er[1]) , $(xr[1]) , $(-er[1]) *A/B \
+0.0, 0.0, 0.0 \
+$(er[3]) , $(xr[3]) , $(-er[3]) *A/B \
+
+cuando B = 0 solo quieda la raiz en el origen
+ya que de la ultima ecuacion solo e=0 es solucion
+"""
 
 # ╔═╡ 660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
 html"""
@@ -90,15 +78,19 @@ input[type*="range"] {
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+IntervalArithmetic = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
+IntervalRootFinding = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
 Nemo = "2edaba10-b0f1-5616-af89-8c11ac63239a"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [compat]
+IntervalArithmetic = "~0.22.35"
+IntervalRootFinding = "~0.6.0"
 Nemo = "~0.49.5"
 Plots = "~1.40.13"
-PlutoUI = "~0.7.62"
+StaticArrays = "~1.9.13"
 Symbolics = "~6.40.0"
 """
 
@@ -108,7 +100,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.4"
 manifest_format = "2.0"
-project_hash = "2fdf9267bc628fe61c9ce3f537842890f739259e"
+project_hash = "3a6918215428e802d1139b5d1c5e76d4b5d4d9d4"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "e2478490447631aedba0823d4d7a80b2cc8cdb32"
@@ -134,12 +126,6 @@ weakdeps = ["Requires", "Test"]
 
     [deps.AbstractAlgebra.extensions]
     TestExt = "Test"
-
-[[deps.AbstractPlutoDingetjes]]
-deps = ["Pkg"]
-git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
-uuid = "6e696c72-6542-2067-7265-42206c756150"
-version = "1.3.2"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -241,11 +227,29 @@ git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
 uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
 version = "0.1.9"
 
+[[deps.BranchAndPrune]]
+deps = ["AbstractTrees"]
+git-tree-sha1 = "9a97232c3aab366fc4408ddc2239939b4cad0179"
+uuid = "d3bc4f2e-91e6-11e9-365e-cd067da536ce"
+version = "0.2.1"
+
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "1b96ea4a01afe0ea4090c5c8039690672dd13f2e"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
 version = "1.0.9+0"
+
+[[deps.CRlibm]]
+deps = ["CRlibm_jll"]
+git-tree-sha1 = "66188d9d103b92b6cd705214242e27f5737a1e5e"
+uuid = "96374032-68de-5a5b-8d9e-752f78720389"
+version = "1.0.2"
+
+[[deps.CRlibm_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "e329286945d0cfc04456972ea732551869af1cfc"
+uuid = "4e9b3aee-d8a1-5a3d-ad8b-7d824db253f0"
+version = "1.0.1+0"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
@@ -302,6 +306,12 @@ version = "1.0.3"
 git-tree-sha1 = "0eee5eb66b1cf62cd6ad1b460238e60e4b09400c"
 uuid = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
 version = "0.2.4"
+
+[[deps.CommonSubexpressions]]
+deps = ["MacroTools"]
+git-tree-sha1 = "cda2cfaebb4be89c9084adaca7dd7333369715c5"
+uuid = "bbf7d656-a473-5ed7-a52c-81e309532950"
+version = "0.3.1"
 
 [[deps.CommonWorldInvalidations]]
 git-tree-sha1 = "ae52d1c52048455e85a387fbee9be553ec2b68d0"
@@ -396,6 +406,12 @@ deps = ["Mmap"]
 git-tree-sha1 = "9e2f36d3c96a820c678f2f1f1782582fcf685bae"
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 version = "1.9.1"
+
+[[deps.DiffResults]]
+deps = ["StaticArraysCore"]
+git-tree-sha1 = "782dd5f4561f5d267313f23853baaaa4c52ea621"
+uuid = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
+version = "1.1.0"
 
 [[deps.DiffRules]]
 deps = ["IrrationalConstants", "LogExpFunctions", "NaNMath", "Random", "SpecialFunctions"]
@@ -536,6 +552,16 @@ git-tree-sha1 = "9c68794ef81b08086aeb32eeaf33531668d5f5fc"
 uuid = "1fa38f19-a742-5d3f-a2b9-30dd87b9d5f8"
 version = "1.3.7"
 
+[[deps.ForwardDiff]]
+deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions"]
+git-tree-sha1 = "a2df1b776752e3f344e5116c06d75a10436ab853"
+uuid = "f6369f11-7733-5829-9624-2563aa707210"
+version = "0.10.38"
+weakdeps = ["StaticArrays"]
+
+    [deps.ForwardDiff.extensions]
+    ForwardDiffStaticArraysExt = "StaticArrays"
+
 [[deps.FreeType2_jll]]
 deps = ["Artifacts", "Bzip2_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
 git-tree-sha1 = "2c5512e11c791d1baed2049c5652441b28fc6a31"
@@ -634,24 +660,6 @@ git-tree-sha1 = "68c173f4f449de5b438ee67ed0c9c748dc31a2ec"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.28"
 
-[[deps.Hyperscript]]
-deps = ["Test"]
-git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
-uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
-version = "0.0.5"
-
-[[deps.HypertextLiteral]]
-deps = ["Tricks"]
-git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
-uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
-version = "0.9.5"
-
-[[deps.IOCapture]]
-deps = ["Logging", "Random"]
-git-tree-sha1 = "b6d6bfdd7ce25b0f9b2f6b3dd56b2673a66c8770"
-uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
-version = "0.2.5"
-
 [[deps.IntegerMathUtils]]
 git-tree-sha1 = "b8ffb903da9f7b8cf695a8bead8e01814aa24b30"
 uuid = "18e54dd8-cb9d-406c-a71d-865a43cbb235"
@@ -661,6 +669,27 @@ version = "0.1.2"
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 version = "1.11.0"
+
+[[deps.IntervalArithmetic]]
+deps = ["CRlibm", "MacroTools", "OpenBLASConsistentFPCSR_jll", "Random", "RoundingEmulator"]
+git-tree-sha1 = "694c52705f8b23dc5b39eeac629dc3059a168a40"
+uuid = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
+version = "0.22.35"
+weakdeps = ["DiffRules", "ForwardDiff", "IntervalSets", "LinearAlgebra", "RecipesBase", "SparseArrays"]
+
+    [deps.IntervalArithmetic.extensions]
+    IntervalArithmeticDiffRulesExt = "DiffRules"
+    IntervalArithmeticForwardDiffExt = "ForwardDiff"
+    IntervalArithmeticIntervalSetsExt = "IntervalSets"
+    IntervalArithmeticLinearAlgebraExt = "LinearAlgebra"
+    IntervalArithmeticRecipesBaseExt = "RecipesBase"
+    IntervalArithmeticSparseArraysExt = "SparseArrays"
+
+[[deps.IntervalRootFinding]]
+deps = ["BranchAndPrune", "ForwardDiff", "IntervalArithmetic", "LinearAlgebra", "Reexport", "StaticArrays"]
+git-tree-sha1 = "68c9d23b092424df6b66e06cd241d2709f1b430e"
+uuid = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
+version = "0.6.0"
 
 [[deps.IntervalSets]]
 git-tree-sha1 = "5fbb102dcb8b1a858111ae81d56682376130517d"
@@ -864,11 +893,6 @@ git-tree-sha1 = "f02b56007b064fbfddb4c9cd60161b6dd0f40df3"
 uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 version = "1.1.0"
 
-[[deps.MIMEs]]
-git-tree-sha1 = "c64d943587f7187e751162b3b84445bbbd79f691"
-uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
-version = "1.1.0"
-
 [[deps.MPFR_jll]]
 deps = ["Artifacts", "GMP_jll", "Libdl"]
 uuid = "3a97d323-0669-5f0c-9066-3539efd106a3"
@@ -967,6 +991,12 @@ version = "1.3.5+1"
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "ece4587683695fe4c5f20e990da0ed7e83c351e7"
 uuid = "656ef2d0-ae68-5445-9ca0-591084a874a2"
+version = "0.3.29+0"
+
+[[deps.OpenBLASConsistentFPCSR_jll]]
+deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "567515ca155d0020a45b05175449b499c63e7015"
+uuid = "6cdc7f73-28fd-5e50-80fb-958a8875b1af"
 version = "0.3.29+0"
 
 [[deps.OpenBLAS_jll]]
@@ -1077,12 +1107,6 @@ version = "1.40.13"
     IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
     ImageInTerminal = "d8c32880-2388-543b-8c61-d9f865259254"
     Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
-
-[[deps.PlutoUI]]
-deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "d3de2694b52a01ce61a036f18ea9c0f61c4a9230"
-uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.62"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -1238,6 +1262,11 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "58cdd8fb2201a6267e1db87ff148dd6c1dbd8ad8"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.5.1+0"
+
+[[deps.RoundingEmulator]]
+git-tree-sha1 = "40b9edad2e5287e05bd413a38f61a8ff55b9557b"
+uuid = "5eaf0fd0-dfba-4ccb-bf02-d820a40db705"
+version = "0.2.1"
 
 [[deps.RuntimeGeneratedFunctions]]
 deps = ["ExprTools", "SHA", "Serialization"]
@@ -1526,11 +1555,6 @@ version = "0.5.29"
 git-tree-sha1 = "0c45878dcfdcfa8480052b6ab162cdd138781742"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 version = "0.11.3"
-
-[[deps.Tricks]]
-git-tree-sha1 = "6cae795a5a9313bbb4f60683f7263318fc7d1505"
-uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
-version = "0.1.10"
 
 [[deps.URIs]]
 git-tree-sha1 = "cbbebadbcc76c5ca1cc4b4f3b0614b3e603b5000"
@@ -1875,19 +1899,14 @@ version = "1.8.1+0"
 # ╠═ebcc5b2f-2ec2-47db-ba07-fe986de6ef83
 # ╠═1b2c9546-a860-4788-8542-d1bd39518175
 # ╠═f3752843-c7d8-4f57-9ec0-b17dd707c621
-# ╠═db393c58-6f5a-4557-8d90-51c7c0c8bc01
-# ╠═ffdb568f-30b6-4cdd-8a97-a68435bf6849
-# ╠═4d8635b0-b713-49fc-9212-8af7716f5279
-# ╠═901776c5-5fbf-405b-8575-7a6c6731db7b
-# ╠═93230d00-57ac-48b1-b7f2-fd34077e81aa
-# ╠═05f892ab-be73-4d66-8ac2-fd839080c1aa
-# ╠═67f55099-85d6-4e75-bbf3-b9695c178e01
-# ╟─df20e954-0034-4a4f-93b4-8c28956bb5b9
-# ╠═e28d9cd7-75f1-49c0-a23b-768e2af8c6bc
+# ╠═9ccfdef9-fcf2-4ce2-9ed9-97e039f7c2d3
 # ╠═be3fd104-b527-4662-b87d-f6cab51dc812
 # ╠═66f1c597-9215-45d3-9caf-5332d356c6ec
-# ╠═832d0860-52ff-4ee9-a5a1-e5f912916bce
 # ╠═fe781eb7-1c76-4b1e-9ddf-0ee8950811eb
+# ╟─c1ec9960-a22a-476c-aba5-c782405264e3
+# ╠═5a41fe38-e6bc-47b3-b88d-58e5318e0c01
+# ╠═8cee9bdf-845e-48da-b465-1568b17d578e
+# ╟─1f946eae-6910-4149-842c-32a3d9b4ba91
 # ╟─660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
