@@ -93,10 +93,16 @@ begin
 end	
 
 # ╔═╡ 9585b653-112f-4fb4-85e6-9a925b720c13
+# ╠═╡ disabled = true
+#=╠═╡
 cp = jldopen("./critical_points2.jld2")
+  ╠═╡ =#
 
-# ╔═╡ 6187a33b-3d80-49f1-aae4-127d50d0f814
-typeof(A0v)
+# ╔═╡ 8f4ab40b-c078-4577-bb8b-16bfb0bf1fd9
+# ╠═╡ disabled = true
+#=╠═╡
+@. critical_points2[getindex(critical_points2,3) == 4]
+  ╠═╡ =#
 
 # ╔═╡ cb8dc4c6-93ef-49ab-a854-8fdee418d3b2
 function find_critical!(critical_points::Vector{Any},sol,A0v::StepRangeLen,B0::Float64;threshold::Float64=0.01)
@@ -149,25 +155,7 @@ function find_critical!(critical_points::Vector{Any},sol,A0::Float64,B0v::StepRa
 end
 
 # ╔═╡ ea8b4fa2-cfc7-42ee-8c1b-4f43377617cf
-# ╠═╡ disabled = true
-#=╠═╡
-jldsave("critical_points2.jld2";critical_points,A0_v,B0_v)
-  ╠═╡ =#
-
-# ╔═╡ d8e8eaee-5a41-44ca-bb71-4933d194ab37
-begin
-	A0_v2 = 0.1:-0.001:-0.1
-	B0_v2 = 0.1:-0.001:-2.0
-	critical_points2 = []
-	for B0 in B0_v2
-		for n=1:3
-			find_critical!(critical_points2,sol[n],A0_v2,B0;threshold=0.3)
-		end	
-	end	
-end	
-
-# ╔═╡ 8f4ab40b-c078-4577-bb8b-16bfb0bf1fd9
-@. critical_points2[getindex(critical_points2,3) == 4]
+jldsave("criticalpoints.jld2";critical_points,A0_v,B0_v)
 
 # ╔═╡ 38935f11-f6ee-47d1-b29e-1f4378324bb5
 begin
@@ -179,12 +167,24 @@ begin
 	scatter!(getindex.(ns,1),getindex.(ns,2),ms=2,msw=0,c=:green,label="NS")
 	fc = @. critical_points[getindex(critical_points,3) == 4]
 	scatter!(getindex.(fc,1),getindex.(fc,2),ms=2,msw=0,c=:orange,label="")
-	ns2 = @. critical_points2[getindex(critical_points2,3) == 3]
-	scatter!(getindex.(ns2,1),getindex.(ns2,2),m=:cross,ms=2,c=:green,label="NS")
-	fc2 = @. critical_points2[getindex(critical_points2,3) == 4]
-	scatter!(getindex.(fc2,1),getindex.(fc2,2),m=:cross,ms=2,c=:orange,label="")
+	#ns2 = @. critical_points2[getindex(critical_points2,3) == 3]
+	#scatter!(getindex.(ns2,1),getindex.(ns2,2),m=:cross,ms=2,c=:green,label="NS")
+	#fc2 = @. critical_points2[getindex(critical_points2,3) == 4]
+	#scatter!(getindex.(fc2,1),getindex.(fc2,2),m=:cross,ms=2,c=:orange,label="")
 	plot!(A0_v,A0_v*0,c=:black,label="")
-	plot!(B0_v*0,B0_v,c=:black,label="",xlims=(-0.4,0.2))
+	plot!(B0_v*0,B0_v,c=:black,label="",xlims=(-0.1,0.1))
+end	
+
+# ╔═╡ d8e8eaee-5a41-44ca-bb71-4933d194ab37
+begin
+	A0_v2 = 0.05:-0.0005:-0.07
+	B0_v2 = 0.1:-0.001:-2.5
+	critical_points2 = []
+	for B0 in B0_v2
+		for n=1:3
+			find_critical!(critical_points2,sol[n],A0_v2,B0;threshold=0.3)
+		end	
+	end	
 end	
 
 # ╔═╡ 660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
@@ -200,11 +200,9 @@ input[type*="range"] {
 """
 
 # ╔═╡ 39e527db-59fd-4710-af55-f7e8720baf4d
-# ╠═╡ disabled = true
-#=╠═╡
 begin
-	A0_v = -1.5:0.002:0.5
-	B0_v = 0.1:-0.002:-2.0
+	A0_v = -2.5:0.001:0.5
+	B0_v = 0.1:-0.001:-2.5
 	critical_points = []
 	for A0 in A0_v
 		for n=1:3
@@ -212,14 +210,16 @@ begin
 		end	
 	end	
 end	
-  ╠═╡ =#
 
 # ╔═╡ 6c55b081-a3b2-4ff9-8574-6eea2dd3ecf8
+# ╠═╡ disabled = true
+#=╠═╡
 begin 
 	critical_points = cp["critical_points"]
 	A0_v = cp["A0_v"]
 	B0_v = cp["B0_v"]
 end;	
+  ╠═╡ =#
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2004,7 +2004,6 @@ version = "1.8.1+0"
 # ╠═d8e8eaee-5a41-44ca-bb71-4933d194ab37
 # ╠═8f4ab40b-c078-4577-bb8b-16bfb0bf1fd9
 # ╠═38935f11-f6ee-47d1-b29e-1f4378324bb5
-# ╠═6187a33b-3d80-49f1-aae4-127d50d0f814
 # ╠═cb8dc4c6-93ef-49ab-a854-8fdee418d3b2
 # ╠═8b5ca24d-f4c2-4851-826d-50af5d5f7245
 # ╟─660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
