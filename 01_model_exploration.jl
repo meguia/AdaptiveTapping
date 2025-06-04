@@ -62,7 +62,7 @@ end
 
 # ╔═╡ 15bacfd4-76c4-4d63-b4fd-be63985e1e14
 begin
-	cp = jldopen("./critical_points2.jld2")
+	cp = jldopen("./criticalpoints.jld2")
 	critical_points = cp["critical_points"]
 	A0_v = cp["A0_v"]
 	B0_v = cp["B0_v"]
@@ -72,7 +72,7 @@ end
 md"""
 A : $(@bind A Slider(-3:0.01:3, default=0.0, show_value=true)) \
 B : $(@bind B Slider(-3:0.01:3.0, default=0.0, show_value=true)) \
-Tpost : $(@bind Tpost Slider(420:0.1:580, default=500, show_value=true)) \
+Tpost : $(@bind Tpost Slider(420:10:580, default=500, show_value=true)) \
 """
 
 # ╔═╡ 3e84b871-39da-4505-98cc-09741affa5be
@@ -121,16 +121,16 @@ tr3, t3 = trajectory(ds3, 90);
 # ╔═╡ 834b7679-4b23-4b9a-9521-b51db4cff97d
 tr3
 
+# ╔═╡ 45a4d023-b902-4454-b20b-4d9c6cc58788
+c-A
+
 # ╔═╡ 100c7668-e4fe-4abf-ba0a-8a4e645a29dc
 begin
 	plot(LinRange(-109,97,size(img)[1]),LinRange(-110,99,size(img)[2]),img,yflip=true)
 	plot!(Matrix(tr)[:,1]-(Matrix(tr)[:,3]-Matrix(tr)[:,4]),-Matrix(tr)[:,2] .+ Tpost,m=:circle,c=:red,label="")
 	plot!(Matrix(tr2)[:,1]-Matrix(tr2)[:,3],-Matrix(tr)[:,2] .+ Tpost,m=:cross,c=:blue,xlabel="eₙ",ylabel="yₙ-Tpost",title="A = $A B = $B Tpost=$Tpost",size=(600,600),xlims=(-90,90),ylims=(-90,90),label="")
-	plot!(Matrix(tr3)[:,1],-Matrix(tr3)[:,2],m=:square,c=:green,label="")
+	plot!(Matrix(tr3)[:,1],-Matrix(tr3)[:,2]-Matrix(tr3)[:,3].-τ.+Tpost,m=:square,c=:green,label="")
 end
-
-# ╔═╡ 45a4d023-b902-4454-b20b-4d9c6cc58788
-c-A
 
 # ╔═╡ 556054f7-ce6f-4248-918d-0f544f2b64a9
 begin
@@ -148,7 +148,7 @@ begin
 	scatter!([A],[B],ylims=(-3,3),xlims=(-3,3),xlabel="A",ylabel="B",label="")
 	p2 = plot(Matrix(tr)[:,1]+Matrix(tr)[:,4]-Matrix(tr)[:,3],Matrix(tr)[:,3].-τ,m=:circle,ms=2,c=:red,label="")
 	plot!(Matrix(tr2)[:,1]-Matrix(tr2)[:,3],Matrix(tr2)[:,3].-τ,m=:cross,ms=2,c=:blue,label="")
-	plot!(Matrix(tr3)[:,1],Matrix(tr3)[:,3],m=:square,ms=2,c=:black,xlabel="eₙ",ylabel="Tₙ",title="A = $A B = $B Tpost=$Tpost",label="")
+	plot!(Matrix(tr3)[:,1],Matrix(tr3)[:,3],m=:square,ms=2,c=:black,xlabel="eₙ",ylabel="Tₙ-τ",title="A = $A B = $B Tpost=$Tpost",label="")
 	scatter!([0],[0],c=:white,ms=6,label="fp")
 	plot(p1,p2,layout=(1,2),size=(1200,600))
 end
@@ -158,6 +158,9 @@ M = [a b 1-(a+b); c d 1-(c+d); A_ 0 (1-A_+B_)]
 
 # ╔═╡ 467fa767-1d19-494d-931b-eb72117d63b5
 eigen(M).values
+
+# ╔═╡ 58ac9d53-d316-43bb-b2eb-89f843bd04c3
+eigen(M).vectors
 
 # ╔═╡ 660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
 html"""
@@ -193,7 +196,7 @@ PlutoUI = "~0.7.62"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.4"
+julia_version = "1.11.5"
 manifest_format = "2.0"
 project_hash = "04bf2236c902eb462bac6007dcb1b967f00bfd45"
 
@@ -1762,7 +1765,7 @@ version = "2.5.4+0"
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.1+4"
+version = "0.8.5+0"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
@@ -2947,9 +2950,10 @@ version = "1.8.1+0"
 # ╠═834b7679-4b23-4b9a-9521-b51db4cff97d
 # ╠═100c7668-e4fe-4abf-ba0a-8a4e645a29dc
 # ╠═15bacfd4-76c4-4d63-b4fd-be63985e1e14
-# ╠═fb61dca8-a8ad-4d6e-ac13-a89b76a49cda
+# ╟─fb61dca8-a8ad-4d6e-ac13-a89b76a49cda
 # ╠═556054f7-ce6f-4248-918d-0f544f2b64a9
 # ╠═467fa767-1d19-494d-931b-eb72117d63b5
+# ╠═58ac9d53-d316-43bb-b2eb-89f843bd04c3
 # ╠═06b25dbb-87ae-4755-880f-59e3aadaebfa
 # ╠═91c7ac9c-62f6-429f-94b2-4cd29561cc59
 # ╠═9d138d9a-8d62-4c71-bf10-b75c67ec74f4
