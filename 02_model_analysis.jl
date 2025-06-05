@@ -37,7 +37,7 @@ Primero intentamos de forma exacta con racionales
 @variables A,B,x,λ
 
 # ╔═╡ 8ac2999d-a533-4372-9779-2c10231c6979
-a,b,c,d = [ 981//1000, 133//500, -823//1000, 238//10000]
+a,b,c,d = [ 980//1000, 132//500, -822//1000, 238//10000]
 
 # ╔═╡ 94f2853d-3f7a-4e2d-83df-8877e1ba9f36
 α,β,γ,δ = [ -221//10000000, -784//10000000, 534//10000000, 335//100000]
@@ -88,6 +88,41 @@ md"""
 # ╔═╡ ad7a9822-02fc-448b-8ae0-daf494b43ba1
 md"""
 # Calculo de Estabilidad del (unico) punto fijo (0,0,0)
+
+Matriz Jacobiana
+
+$\begin{bmatrix}
+a-A & b  & -B\\
+c-A & d & -B\\
+A & 0 & B+1
+\end{bmatrix}$
+
+Autovalores:
+
+$(a-A-\lambda)(d-\lambda)(B+1-\lambda)-b(c-A)(B+1-\lambda)+bBA+AB(d-\lambda)=0$
+"""
+
+# ╔═╡ be51ae96-5fb0-43ff-af4e-130d4e88c4ed
+expr0 = (a_-A-λ)*(d_-λ)*(B+1-λ) - b_*(c_-A)*(B+1-λ) - b_*B*A + A*B*(d_-λ)
+
+# ╔═╡ 878e931d-7e5d-4673-b8a3-0e58d9e13bc2
+expand(expr0)
+
+# ╔═╡ 6ad63230-f8f8-4a7d-a929-de179f7cda80
+expr1 = (a-A-λ)*(d-λ)*(B+1-λ) - b*(c-A)*(B+1-λ) - b*B*A + A*B*(d-λ)
+
+# ╔═╡ 887e0701-ef45-4ce4-9c9a-014804ac4f07
+expand(expr1)
+
+# ╔═╡ d585e559-f679-4d99-a0cc-1847971c0eab
+md"""
+
+Si definimos $C= ad-bc$, $D = b-d$ y $E = a+d$
+podemos escribir la ecuacion caracteristica como
+
+$C + DA + CB - (C+E+DA-A+EB)\lambda + (1+E-A+B)\lambda^2 - \lambda^3 = 0$
+
+
 """
 
 # ╔═╡ 264d65a1-500a-4125-8281-7ce8d3c69366
@@ -95,54 +130,41 @@ begin
 	C = a*d-b*c
 	D = b-d
 	E = a+d
+	C_ = a_*d_-b_*c_
+	D_ = b_-d_
+	E_ = a_+d_
 end	
 
-# ╔═╡ be51ae96-5fb0-43ff-af4e-130d4e88c4ed
-expr0 = (a_-A-x)*(d_-x)*(B+1-x) - b_*(c_-A)*(B+1-x) - b_*B*A + A*B*(d_-x)
-
-# ╔═╡ 878e931d-7e5d-4673-b8a3-0e58d9e13bc2
-simplify(expr0)
-
-# ╔═╡ ead7952f-ae9c-49b6-98ff-bd20a6a573e5
-expr = (a-x)*(d-x)*(1-A+B-x) - b*c*(1-A+B-x) + b*A*(1-c-d) - A*(1-a-b)*(d-x)
-
-# ╔═╡ 6ad63230-f8f8-4a7d-a929-de179f7cda80
-exprb = B*A*(d-x-b)+(B+1-x)*((d-x)*(a-A-x)-b*(c-A))
-
-# ╔═╡ 887e0701-ef45-4ce4-9c9a-014804ac4f07
-exprc = C + D*A + C*B - (C+E)*x + (1-D)*A*x - E*B*x + (1+E)*x^2 - A*x^2 + B*x^2 - x^3
+# ╔═╡ ee7df59f-0de6-4aba-a943-3014b977d1a2
+expr0b = expand(C_ + D_*A + C_*B - (C_+E_ + (D_-1)*A + E_*B)*λ + (1+E_-A+B)*λ^2 - λ^3)
 
 # ╔═╡ e42649f5-bb74-43ae-95a9-0b1c8964a084
-exprd = expand(C + D*A + C*B - (C+E + (D-1)*A + E*B)*x + (1+E-A+B)*x^2 - x^3)
-
-# ╔═╡ a69adae5-5a48-4e88-8bb8-400c821be49b
-simplify(expr0)
-
-# ╔═╡ 992248e9-a787-4f11-90bc-b567b4ed5eeb
-exprb2 = expand(exprb)
-
-# ╔═╡ a4697c28-367e-497c-9fb5-bd35600585ee
-expr2 = expand(expr)
+expr1b = expand(C + D*A + C*B - (C+E + (D-1)*A + E*B)*λ + (1+E-A+B)*λ^2 - λ^3)
 
 # ╔═╡ 0522b113-d748-4bbf-9e43-1e28cb350400
-sol = symbolic_solve(exprb2, x)
+sol = symbolic_solve(expr1, λ)
 
-# ╔═╡ fa936c85-2a4b-4a03-b7db-dcfc905b62eb
-simplify(sol)
+# ╔═╡ 8e68e134-4d08-4cdf-a8dd-ba90e5aaa84c
+md"""
+Bueno no es posible obtener las soluciones de la ec. caracteristica de una forma intelegible asi que vamos la numerica.
+
+Sustituimos en las tres soluciones un array de valores de $A$ y $B$ para evaluar los autovalores.
+Primero evaluamos a un valor fijo en $B=B0$ y calculamos de forma muy 'cabeza' cuando cruza el circulo unidad 
+"""
 
 # ╔═╡ b707dd27-135b-4423-a82c-74b9357714aa
 begin
-	A0v = -2:0.01:1
-	B0 = 0
+	A0v = -1.5:0.01:1.5
+	B0 = -0.05
 	l1 = [substitute(sol[1], Dict([A => A0, B=> B0])) for A0 in A0v];
 	l2 = [substitute(sol[2], Dict([A => A0, B=> B0])) for A0 in A0v];
 	l3 = [substitute(sol[3], Dict([A => A0, B=> B0])) for A0 in A0v];
-	d1 = findall(diff(abs.(l1) .> 2) .!= 0.0 .&& abs.(diff(abs.(l1))) .<  0.01)
-	d2 = findall(diff(abs.(l2) .> 2) .!= 0.0 .&& abs.(diff(abs.(l2))) .<  0.01)
-	d3 = findall(diff(abs.(l3) .> 2) .!= 0.0 .&& abs.(diff(abs.(l3))) .<  0.01)
-	f1 = findall(diff(abs.(imag(l1)) .> 1e-12) .!= 0.0 )
-	f2 = findall(diff(abs.(imag(l2)) .> 1e-12) .!= 0.0 )
-	f3 = findall(diff(abs.(imag(l3)) .> 1e-12) .!= 0.0 )
+	d1 = findall(diff(abs.(l1) .> 1) .!= 0.0 .&& abs.(diff(abs.(l1))) .<  0.01)
+	d2 = findall(diff(abs.(l2) .> 1) .!= 0.0 .&& abs.(diff(abs.(l2))) .<  0.01)
+	d3 = findall(diff(abs.(l3) .> 1) .!= 0.0 .&& abs.(diff(abs.(l3))) .<  0.01)
+	f1 = findall(diff(abs.(imag(l1)) .> 1e-15) .!= 0.0 )
+	f2 = findall(diff(abs.(imag(l2)) .> 1e-15) .!= 0.0 )
+	f3 = findall(diff(abs.(imag(l3)) .> 1e-15) .!= 0.0 )
 end	
 
 # ╔═╡ 7495a957-889d-40c0-a25f-204849e8a380
@@ -171,30 +193,29 @@ begin
 	scatter!(A0v[d1],imag(l1[d1]), ms=3, c=:green, label="")
 	scatter!(A0v[d2],imag(l2[d2]), ms=3, c=:green, label="")
 	scatter!(A0v[d3],imag(l3[d3]), ms=3, c=:green, label="")
+	scatter!(A0v[f1],imag(l1[f1]), ms=3, c=:yellow, label="")
+	scatter!(A0v[f2],imag(l2[f2]), ms=3, c=:yellow, label="")
+	scatter!(A0v[f3],imag(l3[f3]), ms=3, c=:yellow, label="")
 	for d in d1 plot!([A0v[d],A0v[d]],[-1.2,1.5],c=:black,label=""); end
 	for d in d2 plot!([A0v[d],A0v[d]],[-1.2,1.5],c=:black,label=""); end
 	for d in d3 plot!([A0v[d],A0v[d]],[-1.2,1.5],c=:black,label=""); end
 	p3 = scatter(real(l1), c=:blue, ms=2, msw = 0, imag(l1), label="")
 	scatter!(real(l2), c=:blue, ms=2, msw = 0, imag(l2), label="")
 	scatter!(real(l3), c=:blue, ms=2, msw = 0, imag(l3), label="")
+	scatter!(real(l1[d1]),imag(l1[d1]), ms=3, c=:green, label="")
+	scatter!(real(l2[d2]),imag(l2[d2]), ms=3, c=:green, label="")
+	scatter!(real(l3[d3]),imag(l3[d3]), ms=3, c=:green, label="")
 	plot!(cos.(0:pi/100:2*pi),sin.(0:pi/100:2*pi),label="")
 	plot(p1,p2,p3,layout=(1,3),size=(1200,300))
 end	
 
-# ╔═╡ 39e527db-59fd-4710-af55-f7e8720baf4d
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-	A0_v = -2.5:0.001:0.5
-	B0_v = 0.1:-0.001:-2.5
-	critical_points = []
-	for A0 in A0_v
-		for n=1:3
-			find_critical!(critical_points2,sol[n],A0_v2,B0;threshold=0.3)
-		end	
-	end	
-end	
-  ╠═╡ =#
+# ╔═╡ 7353dfe5-81d3-483a-bb88-aa5d53a9c485
+md"""
+ATENCION
+
+Esto calcula el diagrama de bifuraciones pero puede llevar un rato bien largo.
+Los resultados estan guardados en criticalpoints.jld2 y aca lo que hacemos es cargarlos
+"""
 
 # ╔═╡ d8e8eaee-5a41-44ca-bb71-4933d194ab37
 # ╠═╡ disabled = true
@@ -234,10 +255,6 @@ begin
 	scatter!(getindex.(ns,1),getindex.(ns,2),ms=2,msw=0,c=:green,label="NS")
 	fc = @. critical_points[getindex(critical_points,3) == 4]
 	scatter!(getindex.(fc,1),getindex.(fc,2),ms=2,msw=0,c=:orange,label="")
-	#ns2 = @. critical_points2[getindex(critical_points2,3) == 3]
-	#scatter!(getindex.(ns2,1),getindex.(ns2,2),m=:cross,ms=2,c=:green,label="NS")
-	#fc2 = @. critical_points2[getindex(critical_points2,3) == 4]
-	#scatter!(getindex.(fc2,1),getindex.(fc2,2),m=:cross,ms=2,c=:orange,label="")
 	plot!(A0_v,A0_v*0,c=:black,label="")
 	plot!(B0_v*0,B0_v,c=:black,label="")
 end	
@@ -291,6 +308,21 @@ function find_critical!(critical_points::Vector{Any},sol,A0::Float64,B0v::StepRa
 	end
 	return nothing
 end
+
+# ╔═╡ 39e527db-59fd-4710-af55-f7e8720baf4d
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	A0_v2 = -2.5:0.002:0.5
+	B0_v2 = 0.1:-0.002:-2.5
+	critical_points2 = []
+	for A0 in A0_v2
+		for n=1:3
+			find_critical!(critical_points2,sol[n],A0,B0_v2;threshold=0.3)
+		end	
+	end	
+end	
+  ╠═╡ =#
 
 # ╔═╡ 660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
 html"""
@@ -2156,23 +2188,22 @@ version = "1.8.1+0"
 # ╠═07b04338-4890-4e39-9869-1db1a5836231
 # ╟─b7fc00e3-f93c-43cf-9928-3c020563d29e
 # ╟─ad7a9822-02fc-448b-8ae0-daf494b43ba1
-# ╠═264d65a1-500a-4125-8281-7ce8d3c69366
 # ╠═be51ae96-5fb0-43ff-af4e-130d4e88c4ed
 # ╠═878e931d-7e5d-4673-b8a3-0e58d9e13bc2
-# ╠═ead7952f-ae9c-49b6-98ff-bd20a6a573e5
 # ╠═6ad63230-f8f8-4a7d-a929-de179f7cda80
 # ╠═887e0701-ef45-4ce4-9c9a-014804ac4f07
+# ╟─d585e559-f679-4d99-a0cc-1847971c0eab
+# ╠═264d65a1-500a-4125-8281-7ce8d3c69366
+# ╠═ee7df59f-0de6-4aba-a943-3014b977d1a2
 # ╠═e42649f5-bb74-43ae-95a9-0b1c8964a084
-# ╠═a69adae5-5a48-4e88-8bb8-400c821be49b
-# ╠═992248e9-a787-4f11-90bc-b567b4ed5eeb
-# ╠═a4697c28-367e-497c-9fb5-bd35600585ee
 # ╠═0522b113-d748-4bbf-9e43-1e28cb350400
-# ╠═fa936c85-2a4b-4a03-b7db-dcfc905b62eb
+# ╟─8e68e134-4d08-4cdf-a8dd-ba90e5aaa84c
 # ╠═b707dd27-135b-4423-a82c-74b9357714aa
 # ╠═7495a957-889d-40c0-a25f-204849e8a380
 # ╠═9bb2d8a7-3da1-450a-b994-705897535ee9
 # ╠═d01f2d92-db6f-4b4f-8930-6734fc5e5d5f
 # ╠═fc20e05c-d670-47b4-8573-b3ce69c4e09a
+# ╟─7353dfe5-81d3-483a-bb88-aa5d53a9c485
 # ╠═39e527db-59fd-4710-af55-f7e8720baf4d
 # ╠═d8e8eaee-5a41-44ca-bb71-4933d194ab37
 # ╠═ea8b4fa2-cfc7-42ee-8c1b-4f43377617cf
