@@ -5,13 +5,90 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ ea80d620-384b-11f0-0d10-7bb03a1c35e5
-using Plots, Symbolics, Nemo, JLD2
+using Plots, Symbolics, Nemo, JLD2, StaticArrays, IntervalRootFinding, IntervalArithmetic, IntervalArithmetic.Symbols
+
+# ╔═╡ 7da5c1a7-8505-4676-9e19-6885637304de
+md"""
+# Calculo de puntos Fijos
+
+Los puntos fijos van a salir de resolver el sistema
+
+$\begin{aligned}
+0 & =  (a-A-1) e + b y + \alpha e^3 + \beta e y^2 + \gamma y^3 - B s\\
+0 & =  (c-A) e + (d-1) y + \delta e^2 - B s \\
+0 & =  Ae + Bs 
+\end{aligned}$
+
+Primer caso. Si $B=0$ entonces $e=0$, $y=0$ y $s$ esta indeterminado
+Si $B \neq 0$ entonces $s=-eA/B$ y de la segunda ecuacion tenemos 
+
+$y = e(c+\delta e)/(1-d)$
+
+y reemplazando ese valor en la primer ecuacion obtenemos 
+
+$e\left( (a-1) + \alpha e^2 + b\frac{(c+\delta e)}{(1-d)}  + \beta e^2\frac{(c+\delta e)^2}{(1-d)^2} + \gamma e^2\frac{(c+\delta e)^3}{(1-d)^3}\right)=0$
+
+que tiene como solucion $e=0$ (y por lo tanto $y=0$ y $s=0$) y otras eventuales raices del polinomio de orden 5 entre parentesis
+
+Primero intentamos de forma exacta con racionales
+"""
 
 # ╔═╡ ebcc5b2f-2ec2-47db-ba07-fe986de6ef83
-@variables A,B,x,a_,b_,c_,d_
+@variables A,B,x,λ
 
-# ╔═╡ 1b2c9546-a860-4788-8542-d1bd39518175
-a,b,c,d = [ 0.981, 0.266, -0.823, 0.0238]
+# ╔═╡ 8ac2999d-a533-4372-9779-2c10231c6979
+a,b,c,d = [ 981//1000, 133//500, -823//1000, 238//10000]
+
+# ╔═╡ 94f2853d-3f7a-4e2d-83df-8877e1ba9f36
+α,β,γ,δ = [ -221//10000000, -784//10000000, 534//10000000, 335//100000]
+
+# ╔═╡ 8bd40d8f-8a2e-4bad-8ba2-722f3fb667d8
+y0 = x*(c+δ*x)/(1-d)
+
+# ╔═╡ 5029efee-98bb-4fdd-a823-323689eae3f8
+x0 = (a-1) + α*x^2 + b*(c+δ*x)/(1-d) + β*x^2*(c+δ*x)^2/(1-d)^2 + γ*x^2*(c+δ*x)^3/(1-d)^3
+
+# ╔═╡ af6762e9-ddb7-47ca-bb0b-d68a2f362dfc
+sol_x0 = symbolic_solve(x0,x)
+
+# ╔═╡ c60f1954-9179-4628-8668-e8a8bdc8a565
+md"""
+# Calculo numerico
+"""
+
+# ╔═╡ 8a45eb04-6777-4b0c-adb1-d09311b1dde9
+a_,b_,c_,d_,α_,β_,γ_,δ_ = Float64.([a,b,c,d,α,β,γ,δ])
+
+# ╔═╡ 54897d15-c162-4937-a2dc-8c3087fc2509
+begin
+	y0_(x) = x*(c_+δ_*x)/(1-d_)
+	x0_(x) = (a_-1) + α_*x^2 + b_*(c_+δ_*x)/(1-d_)  + β_*x^2*(c_+δ_*x)^2/(1-d_)^2 + γ_*x^2*(c_+δ_*x)^3/(1-d_)^3
+	X = -200..100
+    rts = IntervalRootFinding.roots(x0_, X)
+	er = [mid.(r.region) for r in rts]
+	yr = y0_.(er)
+	[er, yr]
+end
+
+# ╔═╡ 07b04338-4890-4e39-9869-1db1a5836231
+begin
+	xarr = -100:0.1:100
+	pol = [Symbolics.symbolic_to_float(substitute(x0,Dict([x => xi]))) for xi in xarr]
+	plot(xarr,pol,yrange=(-1,1),label="")
+	plot!(xarr,pol.*xarr,yrange=(-1,1),label="")
+	plot!(xarr,xarr*0,c=:black,label="")
+	scatter!(er,er*0,c=:red,label="pf")
+end	
+
+# ╔═╡ b7fc00e3-f93c-43cf-9928-3c020563d29e
+md"""
+**NO HAY OTRAS RAICES ADEMAS DEL (0,0,0)**
+"""
+
+# ╔═╡ ad7a9822-02fc-448b-8ae0-daf494b43ba1
+md"""
+# Calculo de Estabilidad del (unico) punto fijo (0,0,0)
+"""
 
 # ╔═╡ 264d65a1-500a-4125-8281-7ce8d3c69366
 begin
@@ -20,14 +97,26 @@ begin
 	E = a+d
 end	
 
+# ╔═╡ be51ae96-5fb0-43ff-af4e-130d4e88c4ed
+expr0 = (a_-A-x)*(d_-x)*(B+1-x) - b_*(c_-A)*(B+1-x) - b_*B*A + A*B*(d_-x)
+
+# ╔═╡ 878e931d-7e5d-4673-b8a3-0e58d9e13bc2
+simplify(expr0)
+
 # ╔═╡ ead7952f-ae9c-49b6-98ff-bd20a6a573e5
-expr = (a-x)*(d-x)*(1-A+B-x)-b*c*(1-A+B-x)+b*A*(1-c-d)-A*(1-a-b)*(d-x)
+expr = (a-x)*(d-x)*(1-A+B-x) - b*c*(1-A+B-x) + b*A*(1-c-d) - A*(1-a-b)*(d-x)
 
 # ╔═╡ 6ad63230-f8f8-4a7d-a929-de179f7cda80
 exprb = B*A*(d-x-b)+(B+1-x)*((d-x)*(a-A-x)-b*(c-A))
 
 # ╔═╡ 887e0701-ef45-4ce4-9c9a-014804ac4f07
 exprc = C + D*A + C*B - (C+E)*x + (1-D)*A*x - E*B*x + (1+E)*x^2 - A*x^2 + B*x^2 - x^3
+
+# ╔═╡ e42649f5-bb74-43ae-95a9-0b1c8964a084
+exprd = expand(C + D*A + C*B - (C+E + (D-1)*A + E*B)*x + (1+E-A+B)*x^2 - x^3)
+
+# ╔═╡ a69adae5-5a48-4e88-8bb8-400c821be49b
+simplify(expr0)
 
 # ╔═╡ 992248e9-a787-4f11-90bc-b567b4ed5eeb
 exprb2 = expand(exprb)
@@ -92,11 +181,66 @@ begin
 	plot(p1,p2,p3,layout=(1,3),size=(1200,300))
 end	
 
+# ╔═╡ 39e527db-59fd-4710-af55-f7e8720baf4d
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	A0_v = -2.5:0.001:0.5
+	B0_v = 0.1:-0.001:-2.5
+	critical_points = []
+	for A0 in A0_v
+		for n=1:3
+			find_critical!(critical_points2,sol[n],A0_v2,B0;threshold=0.3)
+		end	
+	end	
+end	
+  ╠═╡ =#
+
+# ╔═╡ d8e8eaee-5a41-44ca-bb71-4933d194ab37
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	A0_v2 = 0.05:-0.0005:-0.07
+	B0_v2 = 0.1:-0.001:-2.5
+	critical_points2 = []
+	for B0 in B0_v2
+		for n=1:3
+			find_critical!(critical_points2,sol[n],A0_v2,B0;threshold=0.3)
+		end	
+	end	
+end	
+  ╠═╡ =#
+
 # ╔═╡ ea8b4fa2-cfc7-42ee-8c1b-4f43377617cf
 #jldsave("criticalpoints.jld2";critical_points,A0_v,B0_v)
 
 # ╔═╡ 9585b653-112f-4fb4-85e6-9a925b720c13
 cp = jldopen("./criticalpoints.jld2")
+
+# ╔═╡ 6c55b081-a3b2-4ff9-8574-6eea2dd3ecf8
+begin 
+	critical_points = cp["critical_points"]
+	A0_v = cp["A0_v"]
+	B0_v = cp["B0_v"]
+end;	
+
+# ╔═╡ 38935f11-f6ee-47d1-b29e-1f4378324bb5
+begin
+	fold = @. critical_points[getindex(critical_points,3) == 1]
+	scatter(getindex.(fold,1),getindex.(fold,2),ms=2,msw=0,c=:red,label="fold")
+	flip = @. critical_points[getindex(critical_points,3) == 2]
+	scatter!(getindex.(flip,1),getindex.(flip,2),ms=2,msw=0,c=:blue,label="flip")
+	ns = @. critical_points[getindex(critical_points,3) == 3]
+	scatter!(getindex.(ns,1),getindex.(ns,2),ms=2,msw=0,c=:green,label="NS")
+	fc = @. critical_points[getindex(critical_points,3) == 4]
+	scatter!(getindex.(fc,1),getindex.(fc,2),ms=2,msw=0,c=:orange,label="")
+	#ns2 = @. critical_points2[getindex(critical_points2,3) == 3]
+	#scatter!(getindex.(ns2,1),getindex.(ns2,2),m=:cross,ms=2,c=:green,label="NS")
+	#fc2 = @. critical_points2[getindex(critical_points2,3) == 4]
+	#scatter!(getindex.(fc2,1),getindex.(fc2,2),m=:cross,ms=2,c=:orange,label="")
+	plot!(A0_v,A0_v*0,c=:black,label="")
+	plot!(B0_v*0,B0_v,c=:black,label="")
+end	
 
 # ╔═╡ cb8dc4c6-93ef-49ab-a854-8fdee418d3b2
 function find_critical!(critical_points::Vector{Any},sol,A0v::StepRangeLen,B0::Float64;threshold::Float64=0.01)
@@ -148,39 +292,6 @@ function find_critical!(critical_points::Vector{Any},sol,A0::Float64,B0v::StepRa
 	return nothing
 end
 
-# ╔═╡ d8e8eaee-5a41-44ca-bb71-4933d194ab37
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-	A0_v2 = 0.05:-0.0005:-0.07
-	B0_v2 = 0.1:-0.001:-2.5
-	critical_points2 = []
-	for B0 in B0_v2
-		for n=1:3
-			find_critical!(critical_points2,sol[n],A0_v2,B0;threshold=0.3)
-		end	
-	end	
-end	
-  ╠═╡ =#
-
-# ╔═╡ 38935f11-f6ee-47d1-b29e-1f4378324bb5
-begin
-	fold = @. critical_points[getindex(critical_points,3) == 1]
-	scatter(getindex.(fold,1),getindex.(fold,2),ms=2,msw=0,c=:red,label="fold")
-	flip = @. critical_points[getindex(critical_points,3) == 2]
-	scatter!(getindex.(flip,1),getindex.(flip,2),ms=2,msw=0,c=:blue,label="flip")
-	ns = @. critical_points[getindex(critical_points,3) == 3]
-	scatter!(getindex.(ns,1),getindex.(ns,2),ms=2,msw=0,c=:green,label="NS")
-	fc = @. critical_points[getindex(critical_points,3) == 4]
-	scatter!(getindex.(fc,1),getindex.(fc,2),ms=2,msw=0,c=:orange,label="")
-	#ns2 = @. critical_points2[getindex(critical_points2,3) == 3]
-	#scatter!(getindex.(ns2,1),getindex.(ns2,2),m=:cross,ms=2,c=:green,label="NS")
-	#fc2 = @. critical_points2[getindex(critical_points2,3) == 4]
-	#scatter!(getindex.(fc2,1),getindex.(fc2,2),m=:cross,ms=2,c=:orange,label="")
-	plot!(A0_v,A0_v*0,c=:black,label="")
-	plot!(B0_v*0,B0_v,c=:black,label="")
-end	
-
 # ╔═╡ 660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
 html"""
 <style>
@@ -193,40 +304,24 @@ input[type*="range"] {
 </style>
 """
 
-# ╔═╡ 39e527db-59fd-4710-af55-f7e8720baf4d
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-	A0_v = -2.5:0.001:0.5
-	B0_v = 0.1:-0.001:-2.5
-	critical_points = []
-	for A0 in A0_v
-		for n=1:3
-			find_critical!(critical_points2,sol[n],A0_v2,B0;threshold=0.3)
-		end	
-	end	
-end	
-  ╠═╡ =#
-
-# ╔═╡ 6c55b081-a3b2-4ff9-8574-6eea2dd3ecf8
-begin 
-	critical_points = cp["critical_points"]
-	A0_v = cp["A0_v"]
-	B0_v = cp["B0_v"]
-end;	
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+IntervalArithmetic = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
+IntervalRootFinding = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 Nemo = "2edaba10-b0f1-5616-af89-8c11ac63239a"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [compat]
+IntervalArithmetic = "~0.22.35"
+IntervalRootFinding = "~0.6.0"
 JLD2 = "~0.4.54"
 Nemo = "~0.49.5"
 Plots = "~1.40.13"
+StaticArrays = "~1.9.13"
 Symbolics = "~6.40.0"
 """
 
@@ -234,9 +329,9 @@ Symbolics = "~6.40.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.5"
+julia_version = "1.11.4"
 manifest_format = "2.0"
-project_hash = "49d7dca7fedcbc643522fd93ff14f7064c3cbc51"
+project_hash = "f55837adf8da2d8f19d91272be7256f0e7e43db2"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "e2478490447631aedba0823d4d7a80b2cc8cdb32"
@@ -363,11 +458,29 @@ git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
 uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
 version = "0.1.9"
 
+[[deps.BranchAndPrune]]
+deps = ["AbstractTrees"]
+git-tree-sha1 = "9a97232c3aab366fc4408ddc2239939b4cad0179"
+uuid = "d3bc4f2e-91e6-11e9-365e-cd067da536ce"
+version = "0.2.1"
+
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "1b96ea4a01afe0ea4090c5c8039690672dd13f2e"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
 version = "1.0.9+0"
+
+[[deps.CRlibm]]
+deps = ["CRlibm_jll"]
+git-tree-sha1 = "66188d9d103b92b6cd705214242e27f5737a1e5e"
+uuid = "96374032-68de-5a5b-8d9e-752f78720389"
+version = "1.0.2"
+
+[[deps.CRlibm_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "e329286945d0cfc04456972ea732551869af1cfc"
+uuid = "4e9b3aee-d8a1-5a3d-ad8b-7d824db253f0"
+version = "1.0.1+0"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
@@ -424,6 +537,12 @@ version = "1.0.3"
 git-tree-sha1 = "0eee5eb66b1cf62cd6ad1b460238e60e4b09400c"
 uuid = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
 version = "0.2.4"
+
+[[deps.CommonSubexpressions]]
+deps = ["MacroTools"]
+git-tree-sha1 = "cda2cfaebb4be89c9084adaca7dd7333369715c5"
+uuid = "bbf7d656-a473-5ed7-a52c-81e309532950"
+version = "0.3.1"
 
 [[deps.CommonWorldInvalidations]]
 git-tree-sha1 = "ae52d1c52048455e85a387fbee9be553ec2b68d0"
@@ -518,6 +637,12 @@ deps = ["Mmap"]
 git-tree-sha1 = "9e2f36d3c96a820c678f2f1f1782582fcf685bae"
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 version = "1.9.1"
+
+[[deps.DiffResults]]
+deps = ["StaticArraysCore"]
+git-tree-sha1 = "782dd5f4561f5d267313f23853baaaa4c52ea621"
+uuid = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
+version = "1.1.0"
 
 [[deps.DiffRules]]
 deps = ["IrrationalConstants", "LogExpFunctions", "NaNMath", "Random", "SpecialFunctions"]
@@ -668,6 +793,16 @@ git-tree-sha1 = "9c68794ef81b08086aeb32eeaf33531668d5f5fc"
 uuid = "1fa38f19-a742-5d3f-a2b9-30dd87b9d5f8"
 version = "1.3.7"
 
+[[deps.ForwardDiff]]
+deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions"]
+git-tree-sha1 = "a2df1b776752e3f344e5116c06d75a10436ab853"
+uuid = "f6369f11-7733-5829-9624-2563aa707210"
+version = "0.10.38"
+weakdeps = ["StaticArrays"]
+
+    [deps.ForwardDiff.extensions]
+    ForwardDiffStaticArraysExt = "StaticArrays"
+
 [[deps.FreeType2_jll]]
 deps = ["Artifacts", "Bzip2_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
 git-tree-sha1 = "2c5512e11c791d1baed2049c5652441b28fc6a31"
@@ -775,6 +910,27 @@ version = "0.1.2"
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 version = "1.11.0"
+
+[[deps.IntervalArithmetic]]
+deps = ["CRlibm", "MacroTools", "OpenBLASConsistentFPCSR_jll", "Random", "RoundingEmulator"]
+git-tree-sha1 = "694c52705f8b23dc5b39eeac629dc3059a168a40"
+uuid = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
+version = "0.22.35"
+weakdeps = ["DiffRules", "ForwardDiff", "IntervalSets", "LinearAlgebra", "RecipesBase", "SparseArrays"]
+
+    [deps.IntervalArithmetic.extensions]
+    IntervalArithmeticDiffRulesExt = "DiffRules"
+    IntervalArithmeticForwardDiffExt = "ForwardDiff"
+    IntervalArithmeticIntervalSetsExt = "IntervalSets"
+    IntervalArithmeticLinearAlgebraExt = "LinearAlgebra"
+    IntervalArithmeticRecipesBaseExt = "RecipesBase"
+    IntervalArithmeticSparseArraysExt = "SparseArrays"
+
+[[deps.IntervalRootFinding]]
+deps = ["BranchAndPrune", "ForwardDiff", "IntervalArithmetic", "LinearAlgebra", "Reexport", "StaticArrays"]
+git-tree-sha1 = "68c9d23b092424df6b66e06cd241d2709f1b430e"
+uuid = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
+version = "0.6.0"
 
 [[deps.IntervalSets]]
 git-tree-sha1 = "5fbb102dcb8b1a858111ae81d56682376130517d"
@@ -1084,6 +1240,12 @@ git-tree-sha1 = "ece4587683695fe4c5f20e990da0ed7e83c351e7"
 uuid = "656ef2d0-ae68-5445-9ca0-591084a874a2"
 version = "0.3.29+0"
 
+[[deps.OpenBLASConsistentFPCSR_jll]]
+deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "567515ca155d0020a45b05175449b499c63e7015"
+uuid = "6cdc7f73-28fd-5e50-80fb-958a8875b1af"
+version = "0.3.29+0"
+
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
@@ -1092,7 +1254,7 @@ version = "0.3.27+1"
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.5+0"
+version = "0.8.1+4"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
@@ -1347,6 +1509,11 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "58cdd8fb2201a6267e1db87ff148dd6c1dbd8ad8"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.5.1+0"
+
+[[deps.RoundingEmulator]]
+git-tree-sha1 = "40b9edad2e5287e05bd413a38f61a8ff55b9557b"
+uuid = "5eaf0fd0-dfba-4ccb-bf02-d820a40db705"
+version = "0.2.1"
 
 [[deps.RuntimeGeneratedFunctions]]
 deps = ["ExprTools", "SHA", "Serialization"]
@@ -1976,12 +2143,27 @@ version = "1.8.1+0"
 
 # ╔═╡ Cell order:
 # ╠═ea80d620-384b-11f0-0d10-7bb03a1c35e5
+# ╟─7da5c1a7-8505-4676-9e19-6885637304de
 # ╠═ebcc5b2f-2ec2-47db-ba07-fe986de6ef83
-# ╠═1b2c9546-a860-4788-8542-d1bd39518175
+# ╠═8ac2999d-a533-4372-9779-2c10231c6979
+# ╠═94f2853d-3f7a-4e2d-83df-8877e1ba9f36
+# ╠═8bd40d8f-8a2e-4bad-8ba2-722f3fb667d8
+# ╠═5029efee-98bb-4fdd-a823-323689eae3f8
+# ╠═af6762e9-ddb7-47ca-bb0b-d68a2f362dfc
+# ╟─c60f1954-9179-4628-8668-e8a8bdc8a565
+# ╠═8a45eb04-6777-4b0c-adb1-d09311b1dde9
+# ╠═54897d15-c162-4937-a2dc-8c3087fc2509
+# ╠═07b04338-4890-4e39-9869-1db1a5836231
+# ╟─b7fc00e3-f93c-43cf-9928-3c020563d29e
+# ╟─ad7a9822-02fc-448b-8ae0-daf494b43ba1
 # ╠═264d65a1-500a-4125-8281-7ce8d3c69366
+# ╠═be51ae96-5fb0-43ff-af4e-130d4e88c4ed
+# ╠═878e931d-7e5d-4673-b8a3-0e58d9e13bc2
 # ╠═ead7952f-ae9c-49b6-98ff-bd20a6a573e5
 # ╠═6ad63230-f8f8-4a7d-a929-de179f7cda80
 # ╠═887e0701-ef45-4ce4-9c9a-014804ac4f07
+# ╠═e42649f5-bb74-43ae-95a9-0b1c8964a084
+# ╠═a69adae5-5a48-4e88-8bb8-400c821be49b
 # ╠═992248e9-a787-4f11-90bc-b567b4ed5eeb
 # ╠═a4697c28-367e-497c-9fb5-bd35600585ee
 # ╠═0522b113-d748-4bbf-9e43-1e28cb350400

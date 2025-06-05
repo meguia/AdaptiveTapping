@@ -23,8 +23,42 @@ using Plots, PlutoUI, DynamicalSystems, Images, LinearAlgebra, JLD2
 begin
 	img = load("./PRETypeI.png")
 	img2 = load("./ParameterAB.png")
-	img3 = load("./Ecuaciones.png")
-end
+end;
+
+# ╔═╡ 26995cc5-0b00-4c68-8a92-69c83b7afae7
+md"""
+# Simulacion del modelo y comparacion con resultados PRE
+
+Sistema original del poster:
+
+$\begin{aligned}
+p_{n+1} & =  a(p_n +u_n -T_n)+b(x_n-T_n) + \alpha (p_n +u_n -T_n)^3 + \beta (p_n +u_n -T_n)(x_n-T_n)^2 + \gamma (x_n-T_n)^3 \\
+x_{n+1} & =  c(p_n +u_n -T_n) + d(x_n-T_n) + \delta (p_n +u_n -T_n)^2 + T_n \\
+T_{n+1} & =  A(p_n +u_n -T_n) + B(T_n-\tau) + T_n \\
+u_{n+1} & =  T_n
+\end{aligned}$
+
+donde las variables $(p,x,T,u)$ tienen todas unidades de $ms$. Los parametros adimensionales de la parte lineal son:
+
+$(a,b,c,d) = [ 0.981, 0.266, -0.823, 0.0238]$ 
+
+parametros de la parte no lineal:
+
+$(\alpha,\beta,\gamma,\delta) = [-2.21 10^{-5}, -7.84 10^{-5} , 5.34 10^{-5}, 3.35 10^{-3}]$
+
+y el parametro de tiempo de referencia
+
+$\tau = 500 \ ms$
+
+y parametros adimensionales (ajustables) para la dinamica de computadora $A,B$
+
+Las condiciones iniciales al inicio de la perturbacion son:
+
+$(p,x,T,u)_{t=0} = [0, 500, T_{post}, 500]$
+
+con $T_{post}$ el periodo luego de la perturbacion
+
+"""
 
 # ╔═╡ 78b728f8-6991-4fe3-b2aa-cedb6e6629cf
 function adaptive(u,par,t)
@@ -38,6 +72,23 @@ function adaptive(u,par,t)
 	return  SVector(pn, yn, Tn, sn)
 end	
 
+# ╔═╡ 24746539-5ba3-4dbf-a0fd-17563eda11c1
+md"""
+
+Las variables $u$ y $p$ entran en las ecuaciones siempre como $(p+u)$ por lo tanto si definimos una nueva variable $q := p+u$, el sistema queda reducido a tres ecuaciones:
+
+$\begin{aligned}
+q_{n+1} & =  a(q_n -T_n) + b(x_n-T_n) + \alpha (q_n -T_n)^3 + \beta (q_n -T_n)(x_n-T_n)^2 + \gamma (x_n-T_n)^3 + T_n\\
+x_{n+1} & =  c(q_n -T_n) + d(x_n-T_n) + \delta (q_n -T_n)^2 + T_n \\
+T_{n+1} & =  A(q_n -T_n) + B(T_n-\tau) + T_n 
+\end{aligned}$
+
+con los mismos parametros. Ahora la condicion inicial es 
+
+$(q,x,T)_{t=0} = [500, 500, T_{post}]$
+
+"""
+
 # ╔═╡ 7cfdf18c-48e6-4b21-8e2e-a5e5d04ac39a
 function adaptives(u,par,t)
 	q, y, T = u
@@ -50,6 +101,37 @@ function adaptives(u,par,t)
 	return  SVector(qn, yn, Tn)
 end	
 
+# ╔═╡ d679d30e-7614-478a-abb1-f973d8da5fe3
+md"""
+
+Finalmente podemos simplificar mas el sistema con el siguiente cambio lineal de coordenadas
+
+$\begin{aligned}
+e & := q - T = p + u - T \\
+y & := x - T \\
+s & := T - \tau
+\end{aligned}$
+
+quedando las ecuaciones para las nuevas variables:
+
+$\begin{aligned}
+e_{n+1} & =  (a-A) e_n + b y_n + \alpha e_n^3 + \beta e_n y_n^2 + \gamma y_n^3 - B s_n\\
+y_{n+1} & =  (c-A) e_n + d y_n + \delta e_n^2 - B s_n \\
+s_{n+1} & =  Ae_n + (B+1) s_n 
+\end{aligned}$
+
+con los mismos parametros a excepcion de $\tau$ que ahora quedo incorporado en la variable $s$. 
+Y Ahora la condicion inicial es 
+
+$(e,y,s)_{t=0} = [500-T_{post}, 500-T_{post}, T_{post}-\tau]$
+
+si tomamos $\tau = 500$ y llamamos $\Delta T = T_{post} - 500$ entonces la condicion inicial se puede escribir como:
+
+$(e,y,s)_{t=0} = [-\Delta T ,-\Delta T,\Delta T]$
+
+
+"""
+
 # ╔═╡ 3f1edc7e-c071-4eaa-b087-6f4a4fadce3d
 function adaptive3(u,par,t)
 	e, x, s = u
@@ -60,13 +142,19 @@ function adaptive3(u,par,t)
 	return  SVector(en, xn, sn)
 end	
 
-# ╔═╡ 15bacfd4-76c4-4d63-b4fd-be63985e1e14
-begin
-	cp = jldopen("./criticalpoints.jld2")
-	critical_points = cp["critical_points"]
-	A0_v = cp["A0_v"]
-	B0_v = cp["B0_v"]
-end
+# ╔═╡ a33edb98-e97b-4409-b830-8d95ef3221fe
+md"""
+## Sistema sin dinamica en T
+
+Evolucionamos los tres sistemas sobre la figura del PRE para chequear el ajuste (obviamente con $A=0,B=0$) y que los 3 sistemas dan lo mismo (circulo rojo, cruz negra y cuadrado blanco)
+"""
+
+# ╔═╡ 9dc7627b-16b5-4496-a9a5-c949d24fc76d
+md"""
+# Sistema Adaptativo 
+
+Aca evolucionamos el sistema completo y comparamos con el diagrama de regimenes mostrado en el poster. 
+"""
 
 # ╔═╡ fb61dca8-a8ad-4d6e-ac13-a89b76a49cda
 md"""
@@ -100,11 +188,38 @@ ds2 = DiscreteDynamicalSystem(adaptives, u02, p);
 # ╔═╡ d050089b-1114-4c0a-995c-29b622979f5e
 tr2, t2 = trajectory(ds2, 90);
 
-# ╔═╡ 7374a14a-306a-4f14-80b4-169b304bed9b
-tr2
+# ╔═╡ 15bacfd4-76c4-4d63-b4fd-be63985e1e14
+# esto lo hace para cargar el diagrama de bifurcaciones
+begin
+	cp = jldopen("./criticalpoints.jld2")
+	critical_points = cp["critical_points"]
+	A0_v = cp["A0_v"]
+	B0_v = cp["B0_v"]
+end
 
-# ╔═╡ 06b25dbb-87ae-4755-880f-59e3aadaebfa
-lyapunovspectrum(ds2,60)
+# ╔═╡ a67dd0b6-f002-4e31-b496-aceae189a979
+md"""
+
+## Linealizacion del sistema
+
+El jacobiano del sistema (en la version 3) es de forma general
+
+$\begin{bmatrix}
+a-A+3\alpha e^2 + \beta y^2 & b + 2\beta e y + 3 \gamma y^2 & -B\\
+c-A+3\alpha e^2 + \beta y^2 & d & -B\\
+A & 0 & B+1
+\end{bmatrix}$
+
+para el caso particular del punto fijo $(e,y,s)=[0,0,0]$ (que siempre es un punto fijo para todos los valores de parametros)
+
+$\begin{bmatrix}
+a-A & b  & -B\\
+c-A & d & -B\\
+A & 0 & B+1
+\end{bmatrix}$
+
+
+"""
 
 # ╔═╡ 91c7ac9c-62f6-429f-94b2-4cd29561cc59
 a, b, c, d, α, β, γ, δ, A_, B_, τ = p
@@ -118,18 +233,12 @@ ds3 = DiscreteDynamicalSystem(adaptive3, u03, p3);
 # ╔═╡ 5a2605d6-705a-459d-a8cf-a298840819b3
 tr3, t3 = trajectory(ds3, 90);
 
-# ╔═╡ 834b7679-4b23-4b9a-9521-b51db4cff97d
-tr3
-
-# ╔═╡ 45a4d023-b902-4454-b20b-4d9c6cc58788
-c-A
-
 # ╔═╡ 100c7668-e4fe-4abf-ba0a-8a4e645a29dc
 begin
 	plot(LinRange(-109,97,size(img)[1]),LinRange(-110,99,size(img)[2]),img,yflip=true)
-	plot!(Matrix(tr)[:,1]-(Matrix(tr)[:,3]-Matrix(tr)[:,4]),-Matrix(tr)[:,2] .+ Tpost,m=:circle,c=:red,label="")
-	plot!(Matrix(tr2)[:,1]-Matrix(tr2)[:,3],-Matrix(tr)[:,2] .+ Tpost,m=:cross,c=:blue,xlabel="eₙ",ylabel="yₙ-Tpost",title="A = $A B = $B Tpost=$Tpost",size=(600,600),xlims=(-90,90),ylims=(-90,90),label="")
-	plot!(Matrix(tr3)[:,1],-Matrix(tr3)[:,2]-Matrix(tr3)[:,3].-τ.+Tpost,m=:square,c=:green,label="")
+	plot!(Matrix(tr)[:,1]-(Matrix(tr)[:,3]-Matrix(tr)[:,4]),-Matrix(tr)[:,2] .+ Tpost,m=:circle,ms=5,msw=0,c=:red,label="")
+	plot!(Matrix(tr3)[:,1],-Matrix(tr3)[:,2]-Matrix(tr3)[:,3].-τ.+Tpost,m=:square,c=:white,ms=6,alpha=0.3,label="")
+	plot!(Matrix(tr2)[:,1]-Matrix(tr2)[:,3],-Matrix(tr)[:,2] .+ Tpost,m=:cross,c=:black,ms=5,xlabel="eₙ",ylabel="xₙ-Tpost",title="A = $A B = $B Tpost=$Tpost",size=(600,600),xlims=(-90,90),ylims=(-90,90),label="")
 end
 
 # ╔═╡ 556054f7-ce6f-4248-918d-0f544f2b64a9
@@ -154,13 +263,32 @@ begin
 end
 
 # ╔═╡ 9d138d9a-8d62-4c71-bf10-b75c67ec74f4
-M = [a b 1-(a+b); c d 1-(c+d); A_ 0 (1-A_+B_)]
+J= [(a-A) b -B; (c-A) d -B; A 0 (1+B)]
+
+# ╔═╡ 27c19d4c-f474-4c5a-b22f-66f52ecbe9da
+md"""
+# Autovalores y autovectores
+
+Podemos calcularlos a partir de la ecuacion caracteristica:
+
+$Det(J-I\lambda)=0$
+
+$(a-A-\lambda)(d-\lambda)(B+1-\lambda)-b(c-A)(B+1-\lambda)+bBA+AB(d-\lambda)=0$
+
+que puede expandirse y simplificarse en 
+
+$C + DA + CB - (C+E+DA-A+EB)\lambda + (1+E-A+B)\lambda^2 - \lambda^3 = 0$
+
+con $C= ad-bc$, $D = b-d$ y $E = a+d$
+
+o bien numericamente con eigen
+"""
 
 # ╔═╡ 467fa767-1d19-494d-931b-eb72117d63b5
-eigen(M).values
+eigen(J)
 
-# ╔═╡ 58ac9d53-d316-43bb-b2eb-89f843bd04c3
-eigen(M).vectors
+# ╔═╡ 06b25dbb-87ae-4755-880f-59e3aadaebfa
+lyapunovspectrum(ds3,60)
 
 # ╔═╡ 660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
 html"""
@@ -196,7 +324,7 @@ PlutoUI = "~0.7.62"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.5"
+julia_version = "1.11.4"
 manifest_format = "2.0"
 project_hash = "04bf2236c902eb462bac6007dcb1b967f00bfd45"
 
@@ -1765,7 +1893,7 @@ version = "2.5.4+0"
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.5+0"
+version = "0.8.1+4"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
@@ -2930,9 +3058,12 @@ version = "1.8.1+0"
 
 # ╔═╡ Cell order:
 # ╠═ea80d620-384b-11f0-0d10-7bb03a1c35e5
-# ╠═18b892a9-d08a-4999-acf9-7432f51f5301
+# ╟─18b892a9-d08a-4999-acf9-7432f51f5301
+# ╟─26995cc5-0b00-4c68-8a92-69c83b7afae7
 # ╠═78b728f8-6991-4fe3-b2aa-cedb6e6629cf
+# ╠═24746539-5ba3-4dbf-a0fd-17563eda11c1
 # ╠═7cfdf18c-48e6-4b21-8e2e-a5e5d04ac39a
+# ╟─d679d30e-7614-478a-abb1-f973d8da5fe3
 # ╠═3f1edc7e-c071-4eaa-b087-6f4a4fadce3d
 # ╠═3e84b871-39da-4505-98cc-09741affa5be
 # ╠═f9466967-343c-409d-b515-44c538ad3455
@@ -2944,19 +3075,19 @@ version = "1.8.1+0"
 # ╠═948df112-f611-4b5b-9a21-9c10e1f798fe
 # ╠═66ab0fe5-9489-4df0-8391-a0f92a2ec0a8
 # ╠═d050089b-1114-4c0a-995c-29b622979f5e
-# ╠═7374a14a-306a-4f14-80b4-169b304bed9b
-# ╠═45a4d023-b902-4454-b20b-4d9c6cc58788
 # ╠═5a2605d6-705a-459d-a8cf-a298840819b3
-# ╠═834b7679-4b23-4b9a-9521-b51db4cff97d
+# ╟─a33edb98-e97b-4409-b830-8d95ef3221fe
 # ╠═100c7668-e4fe-4abf-ba0a-8a4e645a29dc
-# ╠═15bacfd4-76c4-4d63-b4fd-be63985e1e14
+# ╟─9dc7627b-16b5-4496-a9a5-c949d24fc76d
 # ╟─fb61dca8-a8ad-4d6e-ac13-a89b76a49cda
 # ╠═556054f7-ce6f-4248-918d-0f544f2b64a9
-# ╠═467fa767-1d19-494d-931b-eb72117d63b5
-# ╠═58ac9d53-d316-43bb-b2eb-89f843bd04c3
-# ╠═06b25dbb-87ae-4755-880f-59e3aadaebfa
+# ╠═15bacfd4-76c4-4d63-b4fd-be63985e1e14
+# ╟─a67dd0b6-f002-4e31-b496-aceae189a979
 # ╠═91c7ac9c-62f6-429f-94b2-4cd29561cc59
 # ╠═9d138d9a-8d62-4c71-bf10-b75c67ec74f4
+# ╟─27c19d4c-f474-4c5a-b22f-66f52ecbe9da
+# ╠═467fa767-1d19-494d-931b-eb72117d63b5
+# ╠═06b25dbb-87ae-4755-880f-59e3aadaebfa
 # ╟─660e2c5a-b6dd-45ca-bc2e-4d3c96d7e14d
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
